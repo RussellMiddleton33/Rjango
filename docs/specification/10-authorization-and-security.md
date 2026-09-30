@@ -1,0 +1,682 @@
+# Authorization and security
+
+[Master specification](README.md) · [Status and provenance](preservation.md)
+
+**Decision status:** SPEC-LOCKED for the stated architecture and invariants; PROPOSED for examples, alternatives, and explicitly open choices.
+**Evidence status:** VALIDATION REQUIRED.
+**Source:** Part III.
+
+Authorization applies across every execution surface. Permission to inspect structure does not grant access to records, secrets, code execution, or destructive operations.
+
+> All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
+
+## Open decisions and interpretation
+
+Concrete policy syntax, transport/auth details, approval protocols, security threat model, and operational controls require further design and adversarial validation.
+
+
+
+<!-- Source: iii section 81. -->
+## Authorization
+
+Basic permission:
+
+```
+#[permission(IsAuthenticated)]
+```
+
+More expressive:
+
+```
+#[permission(CanEditVenue)]
+```
+
+Permission traits receive:
+
+```
+identity
+request
+route metadata
+optional resource
+```
+
+---
+
+<!-- Source: iii section 82. -->
+## Roles
+
+Built-in role support:
+
+```
+Owner
+Admin
+Member
+```
+
+should be application-defined rather than globally hardcoded.
+
+Role assignment can be scoped.
+
+Example:
+
+```
+Russ
+  Admin
+  of Organization A
+
+Russ
+  Member
+  of Organization B
+```
+
+---
+
+<!-- Source: iii section 83. -->
+## Object-Level Authorization
+
+Required for serious applications.
+
+Example:
+
+```
+CanEdit<Venue>
+```
+
+checks:
+
+```
+identity
++
+specific Venue
+```
+
+Rjango should support resource authorization without requiring every application to reinvent the pattern.
+
+---
+
+<!-- Source: iii section 84. -->
+## Permission Composition
+
+Conceptually:
+
+```
+IsAuthenticated AND CanEditVenue
+```
+
+or:
+
+```
+IsAdmin OR IsVenueOwner
+```
+
+Exact Rust syntax remains OPEN until ergonomics are tested.
+
+Metadata representation should support boolean permission trees regardless of surface syntax.
+
+---
+
+<!-- Source: iii section 85. -->
+## Authorization + AMG
+
+Route:
+
+```
+route:venues.update
+```
+
+links:
+
+```
+protected_by
+permission:venues.CanEditVenue
+```
+
+This lets Rjango answer:
+
+```
+Which endpoints can anonymous users reach?
+
+Which routes can mutate User?
+
+Which routes require admin access?
+```
+
+That is extremely valuable for security review and AI agents.
+
+---
+
+<!-- Source: iii section 86. -->
+## Service Accounts
+
+Machine-to-machine access should use explicit service principals, not fake user records.
+
+Service account:
+
+```
+identity
+credentials
+scopes
+audit metadata
+expiration
+```
+
+---
+
+<!-- Source: iii section 87. -->
+## Agent Identity
+
+Because Rjango is AI-forward, agents should eventually be able to authenticate as explicit principals.
+
+Example:
+
+```
+Agent:
+deployment-assistant
+
+Capabilities:
+read schema
+run tests
+generate migration
+
+Not allowed:
+production database writes
+secrets
+user impersonation
+```
+
+AI actions become attributable.
+
+---
+
+<!-- Source: iii section 88. -->
+## Impersonation
+
+Admin/support impersonation, if enabled, must be explicit and auditable.
+
+Audit record:
+
+```
+actor:
+admin-user
+
+acting_as:
+customer-user
+
+reason:
+support case
+
+started:
+...
+
+ended:
+...
+```
+
+No silent identity swapping.
+
+---
+
+<!-- Source: iii section 89. -->
+## Security Architecture
+
+Rjango's security goal is:
+
+> Secure defaults with explicit escape hatches.
+
+The framework cannot make applications secure automatically, but it can eliminate entire categories of dangerous defaults.
+
+---
+
+<!-- Source: iii section 90. -->
+## CSRF
+
+Cookie-authenticated state-changing browser requests require CSRF protection.
+
+Rjango should not apply CSRF blindly to:
+
+```
+Bearer-token APIs
+```
+
+where the threat model differs.
+
+The framework understands authentication mode and applies the appropriate policy.
+
+---
+
+<!-- Source: iii section 91. -->
+## CORS
+
+Default:
+
+```
+same-origin
+```
+
+not:
+
+```
+*
+```
+
+Applications explicitly configure trusted origins.
+
+Credentials plus wildcard origins must be rejected where invalid/insecure.
+
+---
+
+<!-- Source: iii section 92. -->
+## Security Headers
+
+Production defaults should include sensible support for:
+
+```
+Content-Security-Policy
+X-Content-Type-Options
+Referrer-Policy
+frame protections
+HSTS where properly deployed
+```
+
+But CSP cannot be safely universal without application awareness.
+
+Rjango should provide strong configuration and diagnostics rather than a single magical policy.
+
+---
+
+<!-- Source: iii section 93. -->
+## Trusted Hosts
+
+Host-header validation should be available and production-recommended.
+
+Example:
+
+```
+[security]
+allowed_hosts = [
+    "api.example.com"
+]
+```
+
+---
+
+<!-- Source: iii section 94. -->
+## Trusted Proxies
+
+Configured explicitly.
+
+Example:
+
+```
+[server.proxy]
+trusted = [
+    "10.0.0.0/8"
+]
+```
+
+Only then can forwarded client IP/scheme headers influence security decisions.
+
+---
+
+<!-- Source: iii section 95. -->
+## Rate Limiting
+
+Scopes:
+
+```
+global
+IP
+identity
+API key
+route
+custom
+```
+
+Algorithms may be backed by:
+
+```
+memory
+Redis
+other distributed stores
+```
+
+Responses should use standard HTTP semantics.
+
+---
+
+<!-- Source: iii section 96. -->
+## Request Limits
+
+Framework safeguards:
+
+```
+maximum headers
+maximum header size
+maximum body
+multipart limits
+upload limits
+JSON depth where practical
+request timeout
+```
+
+Routes can selectively override.
+
+---
+
+<!-- Source: iii section 97. -->
+## Secrets
+
+Typed secret wrapper:
+
+```
+Secret<String>
+```
+
+Debug representation:
+
+```
+Secret([REDACTED])
+```
+
+Secrets must automatically redact from:
+
+```
+logs
+error reports
+metadata
+MCP
+debug output
+```
+
+unless explicitly and narrowly accessed by authorized application code.
+
+---
+
+<!-- Source: iii section 98. -->
+## Secret Sources
+
+Support:
+
+```
+environment variables
+mounted files
+secret managers/plugins
+```
+
+Rjango configuration references secret names, not necessarily values.
+
+AMG knows:
+
+```
+DATABASE_URL
+required
+secret
+```
+
+without knowing the value.
+
+---
+
+<!-- Source: iii section 99. -->
+## SQL Injection
+
+Normal ORM/query APIs must bind parameters.
+
+Raw SQL APIs should make parameter binding straightforward.
+
+Dangerous interpolation should trigger documentation/compiler/lint warnings where detectable.
+
+---
+
+<!-- Source: iii section 100. -->
+## XSS
+
+JSON APIs largely avoid direct HTML rendering concerns.
+
+If Rjango later provides templates:
+
+```
+escaping enabled by default
+```
+
+Raw/unescaped HTML must require explicit intent.
+
+---
+
+<!-- Source: iii section 101. -->
+## Open Redirects
+
+Redirect helpers should distinguish:
+
+```
+internal route redirect
+```
+
+from:
+
+```
+arbitrary external URL
+```
+
+External redirects should be explicit.
+
+---
+
+<!-- Source: iii section 102. -->
+## File Security
+
+Uploads require:
+
+- generated storage names
+- filename sanitization
+- MIME awareness
+- size limits
+- no implicit executable serving
+- configurable scanning hooks
+- storage outside executable/source directories
+
+Do not trust client filenames.
+
+---
+
+<!-- Source: iii section 103. -->
+## Error Leakage
+
+Development:
+
+```
+rich diagnostics
+source locations
+backtraces
+SQL fingerprints
+```
+
+Production:
+
+```
+stable public error
+request ID
+safe context
+```
+
+No internal source path, stack, SQL value or secret leakage.
+
+---
+
+<!-- Source: iii section 104. -->
+## Audit Log
+
+Rjango should define a standard audit-event abstraction.
+
+Example:
+
+```
+AuditEvent {
+    actor,
+    action,
+    resource,
+    result,
+    request_id,
+    timestamp,
+    metadata,
+}
+```
+
+High-value uses:
+
+```
+login
+logout
+password reset
+permission change
+API key creation
+admin actions
+MCP privileged operation
+impersonation
+migration execution
+```
+
+---
+
+<!-- Source: iii section 105. -->
+## MCP Security Boundary
+
+MCP must not become a privileged side door.
+
+The permission model should look like:
+
+```
+Agent Identity
+      │
+      ▼
+MCP Authorization
+      │
+      ├── metadata.read
+      ├── tests.run
+      ├── migrations.generate
+      ├── database.read
+      ├── database.write
+      └── secrets.read
+```
+
+These scopes are independent.
+
+---
+
+<!-- Source: iii section 106. -->
+## Production MCP
+
+Default:
+
+```
+[mcp]
+enabled = false
+```
+
+If enabled, production MCP must require authenticated transport and explicitly configured capabilities.
+
+No inheritance from development permissions.
+
+---
+
+<!-- Source: iii section 107. -->
+## MCP Confirmation Policy
+
+Some tool operations should support human approval boundaries.
+
+Example classification:
+
+```
+READ
+inspect model
+
+LOCAL WRITE
+generate source migration
+
+ENVIRONMENT WRITE
+run migration
+
+DESTRUCTIVE WRITE
+drop production table
+```
+
+The MCP schema should communicate operation risk.
+
+A client can then enforce approval workflows.
+
+---
+
+<!-- Source: iii section 108. -->
+## Supply-Chain Security
+
+Because Rjango will itself be infrastructure, the project spec should require:
+
+```
+dependency auditing
+locked CI dependencies
+security advisories
+minimal feature activation
+release provenance
+SBOM capability
+signed/reproducible release strategy where practical
+```
+
+Dependencies should be periodically reviewed for necessity.
+
+---
+
+<!-- Source: iii section 109. -->
+## Unsafe Rust Policy
+
+Framework-owned unsafe Rust should default to:
+
+```
+forbidden
+```
+
+unless there is a documented and reviewed technical reason.
+
+Any unsafe block requires:
+
+```
+safety invariant documentation
+tests
+review justification
+```
+
+Ideally Rjango itself contains zero unsafe Rust and relies on lower-level audited crates for unsafe primitives.
+
+---
+
+<!-- Source: iii section 110. -->
+## Security Diagnostics
+
+`rjango check` should report things like:
+
+```
+CRITICAL
+production debug mode enabled
+
+CRITICAL
+session cookies not Secure
+
+WARNING
+CORS accepts unexpected origin pattern
+
+WARNING
+MCP database.write enabled in production
+
+WARNING
+trusted proxy configuration accepts all networks
+
+WARNING
+password reset token lifetime unusually long
+```
+
+Checks need stable IDs.
+
+Example:
+
+```
+RJG-SEC-014
+```
