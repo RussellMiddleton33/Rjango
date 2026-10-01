@@ -10,6 +10,21 @@ Desired model state, historical migration state, and actual database state are d
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Phase/step execution, recovery and stable IR
+
+Migration-wide atomic=false is superseded as the complete execution model. A versioned stable migration IR records historical schema types, structured operations, dependencies, explicit renames, pre/post database fingerprints and backend capabilities. Replay must not depend on current application models. Custom SQL/data callbacks declare compatibility/reversal/recovery limits; arbitrary Rust code has no automatic historical compatibility.
+
+Each phase/step declares transaction Required, Forbidden or Allowed; Allowed prefers a transaction where supported. Planning rejects incompatible grouping. Mixed transactional/nontransactional phases do not promise whole-migration rollback. Large backfills use bounded batches and durable checkpoints.
+
+The ledger records migration/phase/step identity, artifact/IR checksum, started/completed/failed/unknown outcome, checkpoints and sanitized diagnostics. Record transactional completion atomically with its effects when possible. A crash between external DDL and ledger update requires postcondition introspection, never blind replay. Partial/invalid objects need a reviewed cleanup/resume path. Dependencies advance only after required steps are verified. Resume distinguishes retry-safe, reconciliation-required and operator-required states; destructive repair is separately authorized.
+
+One logical migrator holds a database/graph-scoped lock across all phases, including nontransactional steps. Advisory locking is a candidate; exact fencing/session-loss behavior needs validation. Lock loss stops progress; the successor reconciles unknown steps. Acquisition has bounded wait. Applied checksum mismatches fail closed; edited history never silently replaces applied history. Repair records actor/reason/actual state. IR upgrades preserve meaning with explicit checksum-version handling; unsupported IR fails before mutation.
+
+
 ## Open decisions and interpretation
 
 Migration file representation, exact commands, opaque field identities, rename UX, and detailed backend support remain open. A safety label is a review aid, not proof an operation is harmless.

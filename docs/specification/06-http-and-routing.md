@@ -10,6 +10,17 @@ Axum and Tower provide the HTTP foundation. Rjango adds typed handlers, explicit
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Shared operations and Problem Details
+
+HTTP handlers adapt inputs to [shared operations](22-application-operations-and-services.md), then project explicit response schemas. Transport authentication/body limits complement operation authorization.
+
+Default HTTP API errors follow [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html), normally application/problem+json. Rjango's profile uses stable absolute type URIs, title, matching HTTP status, safe occurrence detail and optional non-sensitive instance. Stable code, correlation ID and field-validation errors are documented extensions. SQL, causes, secrets and stack traces remain private. Clients dispatch by type/code, tolerate unknown extensions and never parse localized prose. CLI/MCP project the same canonical error descriptors into their transport formats. Bodyless responses and failures after streaming begins require explicit transport handling.
+
+
 ## Open decisions and interpretation
 
 Exact routing/middleware syntax and full proxy/deployment guidance remain open. Examples express contracts, not a usable framework API.

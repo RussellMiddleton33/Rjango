@@ -10,6 +10,21 @@ Authorization applies across every execution surface. Permission to inspect stru
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Query scoping and tenant isolation
+
+Apply authorization scopes before list/count/aggregate/pagination/export execution; fetch-all-and-filter leaks counts/existence and breaks pagination. Compose scopes with filters and mutation object checks. Validate writable IDs/foreign keys inside the same tenant/transaction. Bulk writes, joins, relation loading, search, Admin, Jobs and MCP share scoping. Unsupported policy translation fails closed or requires an explicitly reviewed bounded alternative.
+
+Tenant derives from trusted authenticated context, never client payload alone. Boundaries cover constraints/foreign keys, database routing, cache keys, storage, outbox and realtime channels. Row-level security adds defense in depth. Reset pooled tenant/session state safely. Raw SQL needs explicit scoped review; cross-tenant privilege is distinct and audited.
+
+### Actor, subject and delegation chain
+
+Actor is the executing human/agent/service; subject is the identity on whose behalf it acts. Ordered delegation links record issuer/recipient, scope, tenant, environment/resource, expiry and revocation reference. Effective authority is bounded by every link and current policy; delegation never amplifies privilege. Workers record execution service plus origin and revalidate where required. Audit includes operation/transport, correlation/message/idempotency IDs, policy decision/result and relevant fingerprints, never credentials. Revoked/expired chains fail closed.
+
+
 ## Open decisions and interpretation
 
 Concrete policy syntax, transport/auth details, approval protocols, security threat model, and operational controls require further design and adversarial validation.

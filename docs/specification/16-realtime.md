@@ -10,6 +10,17 @@ WebSockets, SSE, typed channels, authorization, and bounded backpressure belong 
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Version evolution and permission revalidation
+
+Realtime commands invoke shared operations. Negotiate supported protocol versions; messages identify type/schema version. Unsupported versions produce explicit upgrade/reconnect behavior. Rolling deployments have a declared compatibility window. Ephemeral delivery has no durable replay guarantee; persisted streams/cursors require separate retention contracts.
+
+Authorize connect, subscribe, publish/command and protected delivery. Revalidate credential expiry/refresh, logout, role/tenant/resource changes and delegation revocation. Bounded periodic rechecks cover missed invalidations; recheck queued protected messages and evict revoked subscriptions. Declare/validate maximum stale-authorization windows; sensitive streams use authoritative checks or fail closed if policy is unavailable. Topic names/prior authentication are insufficient. Bound per-subscriber bytes/count; slow-client policy drops ephemeral messages, requests resync or disconnects explicitly.
+
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Distributed broker choice, reconnect guarantees, authorization revalidation, and cross-node semantics need fuller design.

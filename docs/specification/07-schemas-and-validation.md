@@ -10,6 +10,24 @@ Persistence models, input schemas, and output schemas have separate responsibili
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Database type system versus API wire type system
+
+DatabaseType describes storage/constraints/precision/backend capability; WireType describes serialization/validation/client representation. Model fields never automatically become public schemas. Explicit mapping declares nullability versus omission, range, precision and timezone semantics. Database and API fingerprints evolve independently.
+
+| Value | Default JSON / TypeScript contract |
+| --- | --- |
+| i64 / u64 | Decimal string / validated string, optionally branded. Number requires an explicit JavaScript-safe integer range. Bigint is an opt-in SDK conversion, not JSON. |
+| Decimal | Precision-preserving decimal string / string or explicit decimal-library adapter; no implicit floating conversion. |
+| DateTime | Offset-bearing RFC 3339 string / string; instant normalization/fractional precision declared. Date conversion is opt-in and documents precision loss. |
+| Local date/time | Explicit local value; no invented UTC instant. Timezone interpretation is a separate contract. |
+
+OpenAPI, codecs, validation and docs must agree. Test overflow, negative u64, precision loss, malformed dates and DST ambiguity. Backend unsigned-range support remains validation-required.
+
+
 ## Open decisions and interpretation
 
 Detailed validator extension APIs, schema evolution compatibility, and exact derive/macro syntax remain open.

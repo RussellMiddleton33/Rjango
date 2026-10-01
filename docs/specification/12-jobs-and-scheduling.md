@@ -10,6 +10,15 @@ Durable jobs use at-least-once delivery, idempotency, observable retries, and tr
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Durable dispatch and evolution
+
+Transaction-coupled dispatch uses the [core outbox](23-durability-and-message-contracts.md); after-commit callbacks alone cannot survive process death reliably. Jobs/events use versioned envelopes. Consumers declare supported payload versions/upgrades and rolling-deployment windows. Unknown versions quarantine/dead-letter with diagnostics. Leases/retries/cancellation preserve at-least-once semantics; acknowledge after durable outcome. Delivery deduplication differs from business idempotency.
+
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Backend defaults, scheduling leadership, payload evolution and exact APIs require validation and fuller design.

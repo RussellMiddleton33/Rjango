@@ -1,36 +1,45 @@
 # MCP architecture and security boundaries
 
-[AI documentation](README.md) · [AMG](../specification/02-application-metadata-graph.md) · [Security](../specification/10-authorization-and-security.md)
+[Master specification](../specification/README.md) · [Operations](../specification/22-application-operations-and-services.md) · [Security](../specification/10-authorization-and-security.md)
 
-**Decision:** SPEC-LOCKED boundaries. **Interface details:** PROPOSED. **Evidence:** VALIDATION REQUIRED.
+**Status:** REVIEW CANDIDATE 1. Boundaries adopted; transport/schema/version details and conformance remain VALIDATION REQUIRED.
 
-## Purpose and planes
+## Planes and exposure
 
-Expose versioned, structured understanding of the application to agents without making application execution dependent on AI. Definition metadata describes structure; runtime bindings resolve executable behavior; operational resources report state. Business records and secret values are not graph metadata. Public, Internal, DevelopmentOnly and Restricted exposure classifications govern what may be published.
+Definition metadata, runtime bindings and operational observations are distinct. Business records and secret values are not AMG metadata. Filter Public/Internal/DevelopmentOnly/Restricted resources by identity/environment; redact production source paths and sensitive structures. Inspection includes provenance, completeness, schema version and relevant projection fingerprints. Metadata visibility never grants execution/data authority.
 
-Intended resources describe apps, models, schemas, routes, permissions, migration state, jobs, configuration schemas, docs and diagnostics. Use stable IDs, deterministic serialization and explicit metadata schema versions. Production source paths and sensitive structures may require filtering. Exact resource URIs, tool names and protocol schemas are still design proposals.
+## Local versus remote authentication
 
-## Capability separation
+Local development stdio uses the local OS user/process trust boundary, explicit environment selection and allowlisted capabilities. Local ownership does not authorize production access. Avoid credentials in arguments/logs and never implicitly reuse an unrestricted developer shell identity for remote privileges.
 
-| Capability | Boundary |
+Remote MCP requires TLS and explicit network authentication/authorization aligned with a pinned, verified supported MCP authorization revision. Validate issuer, audience/resource, expiry and scopes/capabilities; document discovery, refresh and revocation behavior. Reject arbitrary upstream bearer-token passthrough to downstream services. Use separate least-privilege downstream credentials; prevent confused-deputy escalation and cross-resource token reuse. OAuth/OIDC integration must follow the supported MCP contract rather than an invented privileged session. Exact revision/provider support remains open; no conversation-derived protocol revision is claimed validated.
+
+Production MCP is disabled by default. Enabling transport starts with zero application-data access and explicit metadata visibility policy. Rate/concurrency/body/time limits, audit and tenant/delegation checks apply to each call.
+
+## Capabilities
+
+| Capability | Required boundary |
 | --- | --- |
-| Inspect metadata | Filter structural visibility by identity, environment and exposure policy. |
-| Read application data | Require independent data-read authorization and applicable object/tenant policy. |
-| Modify data | Require separate write permissions, validation and audit. |
-| Generate migrations | Produce reviewable artifacts; generation is not permission to apply them. |
-| Apply migrations | Independently authorize environment, operation risk and execution. |
-| Run commands, jobs or admin actions | Independently expose and authorize each capability; registration in one interface does not automatically expose it through MCP. |
-| Read secrets | Separate explicit capability; normal introspection reveals schema/provenance and redacted state only. |
-| Perform destructive actions | Enforce risk/approval policy and retain audit evidence. |
+| Metadata inspection | Filter/redact structural resources independently of data. |
+| Application-approved query | Explicit scoped operation; tenant/object/field policy and bounded output. |
+| Mutation/action/job | Separate explicit exposure, shared operation authorization, preconditions and audit. |
+| Migration generation | Reviewable artifact only; no permission to apply. |
+| Migration execution | Independent environment/risk/approval policy and migration lock/checksum safeguards. |
+| Secret diagnostics | Existence/source/rotation/validation state only; never raw values. |
+| Local development raw database tooling | Explicit development-only capability and environment guard; no broad production default. |
 
-## Identity, transport and production
+Core Rjango exposes **no raw secrets.read tool/capability**. Applications needing exceptional secret tools own a separate privileged boundary outside core MCP. Production data tools prefer approved queries, sanitized summaries and aggregates; registration of a model never enables arbitrary production SQL. Shell/command execution is separately exposed and constrained, not implied by MCP authentication.
 
-Agents use explicit identities/service accounts and scoped permissions. Treat authenticated MCP transport as a security boundary with resource limits, audit, and explicit tool policy. Production MCP is disabled by default and enabled deliberately with constrained access. Read-only metadata inspection must never imply database mutation or arbitrary shell execution. A human's authority is not automatically delegated to an agent.
+## Actor/subject and delegation
 
-## Reviewable mutation
+Record the executing agent/service actor, human/service subject and ordered attenuated delegation chain. Authority is limited by every link, tenant, environment, expiry/revocation and current policy. Neither a launch by a human nor a tool description grants delegation. Audit operation/tool, decision/result, correlation/idempotency IDs and relevant fingerprints without credentials or sensitive payloads.
 
-The graph is immutable. Changes occur through source edits, metadata rebuild/validation, reviewable diffs and the separately authorized execution paths. Destructive or production changes require their applicable policy checks; no tool may silently widen its capability. Data-access tooling remains distinct from model introspection and query explanation.
+## Stale-fingerprint and idempotency protections
 
-## Remaining design
+Reviewable mutations bind expected operation/auth/MCP projection fingerprints, target environment/resource, canonical input digest and required concurrency preconditions. Re-evaluate current authorization and those preconditions immediately before execution. Stale contracts reject with structured diagnostics and require reinspection/replanning; an old preview is not approval. A matching fingerprint does not prove unchanged business row state, so row versions/ETags/locks remain necessary.
 
-Complete transport/authentication mechanisms, capability schemas, confirmation UX, remote trust model, resource quotas, audit retention, version negotiation and Django translation resources remain unspecced. The graph's original MCP sections and ORM data-access boundaries are retained in their canonical topic documents.
+Retryable commands require scoped idempotency keys. Persist claims/outcomes with the operation's database changes where feasible. Concurrent retries do not execute twice; same key/different input conflicts. Unknown outcome requires reconciliation, not blind replay. Retention/expiry and in-progress response are declared. Returning cached sensitive outcomes still requires current authorization. MCP transport retries do not provide business exactly-once semantics. Destructive/production operations enforce applicable approval policy; neither tokens nor previews silently broaden capability.
+
+## Open validation
+
+Pin protocol/auth versions, transport/resource schemas, capability grammar, credential storage, delegation revocation, retention, limits and confirmation binding. Test local-vs-production guards, wrong issuer/audience, expiry/revocation, passthrough rejection, tenant leakage, stale metadata/row state, duplicate/conflicting calls, cancellation and sanitized diagnostics. No unvalidated protocol claim authorizes implementation.

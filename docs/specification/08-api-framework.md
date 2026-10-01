@@ -10,6 +10,15 @@ The API layer supports explicit handlers and opt-in resource APIs, with allowlis
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Shared mutation contracts
+
+APIs invoke [operations](22-application-operations-and-services.md), use [wire types](07-schemas-and-validation.md) and [Problem Details](06-http-and-routing.md). Idempotency belongs to the operation and survives adapter differences. Stale fingerprints fail preconditions; hashes never grant authority. Compatibility covers behavior/errors/types as well as routes.
+
+
 ## Open decisions and interpretation
 
 Idempotency storage, versioning defaults, final resource syntax, SDK scope, and precise compatibility rules remain open.

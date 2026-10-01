@@ -10,6 +10,17 @@ Applications are explicitly registered Rust modules or crates with stable identi
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Plugin trust and macro/runtime compatibility
+
+1.0 plugins are **compile-time trusted Rust extensions** linked into the application with process authority. Namespaces/capabilities do not sandbox Rust code. No stable dynamic Rust ABI or untrusted hot-loaded binary isolation is promised. Untrusted extensions need a separate process/protocol outside this contract. Declare dependencies, feature requirements, extension schema versions and supported Rjango versions; unknown required extensions fail registration.
+
+Proc macros and runtime share a versioned generated-code contract. Incompatible pairs/duplicate runtimes fail with actionable diagnostics before serving traffic. Exact pairing versus supported version ranges, MSRV and features remain PROPOSED. Generated internal symbols are not public application APIs. Compile-pass/fail tests cover renamed dependencies, reexports, feature combinations, workspace skew and upgrades.
+
+
 ## Open decisions and interpretation
 
 The full plugin/package compatibility contract remains unspecced; app descriptor and lifecycle signatures are illustrative.

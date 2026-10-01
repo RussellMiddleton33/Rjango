@@ -10,6 +10,19 @@ Rjango owns its public model and query API; SeaORM 2.x is the selected ORM found
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Separate relationship concepts
+
+Persisted model values represent row state, including stored foreign-key IDs. Relationship descriptors are AMG/generated metadata for target, cardinality, join keys and constraints. Loaded relation values live in explicit wrappers/projections, not implicitly persisted fields. Earlier HasMany/HasOne field sketches are superseded as concrete stored-state representations. NotLoaded, LoadedEmpty, LoadedNull and LoadedValue remain distinct where applicable. Partial rows cannot masquerade as complete mutable models. Eager/batched loading is explicit async I/O; property access never queries. Returned loaded types and F/R ergonomics remain VALIDATION REQUIRED.
+
+### Multiple databases and replicas
+
+Transactions/outboxes bind to one database. Rjango makes **no cross-database ACID guarantee**, including separately opened transactions. Cross-database workflows declare eventual consistency, compensation and reconciliation boundaries. Replica reads are eventual unless an explicitly supported consistency mechanism is selected. Authorization and mutation prerequisites use primary reads by default. Read-your-writes requires primary pinning or a verified replication-position barrier with deadline/primary fallback; fixed sleeps prove nothing. Routing preserves tenant and transaction affinity. Lag/failover/barrier support remain validation-required.
+
+
 ## Open decisions and interpretation
 
 The final locks and open decisions are preserved below. In particular, model macro form, `F`/`R` syntax, creation/builders, partial selections, loaded-state representation, and backend wrapping require evidence before syntax is frozen.

@@ -27,3 +27,7 @@ Runtime reflection/global import side effects, independently maintained feature 
 Determinism, duplicate/reference/cycle diagnostics, fingerprint stability, extension evolution, memory costs and schema compatibility require evidence.
 
 This ADR records an architectural agreement, not completed implementation or a passing validation result. A future revision should link evidence or a superseding ADR rather than silently rewriting the decision history.
+
+## Candidate 1 clarification
+
+The [architecture review](../reviews/architecture-review-candidate-1.md) retains this foundational decision and records its strengthened boundaries. Observed AMG evidence remains a separate overlay; migrations use phase/step recovery and checksums; core MCP never exposes raw secrets and defaults to zero production application-data access. These amendments supersede conflicting earlier sketches, with validation still required.

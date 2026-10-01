@@ -10,6 +10,23 @@ The AMG is an immutable, deterministic description of the application, derived f
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Provenance and completeness
+
+Relevant facts and edges carry Generated, Declared, Inferred or Observed evidence with source reference, producer/version and completeness scope. Generated evidence is authoritative only within supported generator scope; declarations can be wrong. Inferred evidence includes assumptions/confidence; observed evidence includes time window, environment and sampling. Raw SQL/custom code can make effect sets partial or unknown. Absence of an inferred/observed edge never proves absence of behavior or grants permission.
+
+Observed facts are an operational overlay bound to a definition fingerprint, never mutations of the immutable AMG. Inspection exposes stale observations. Operation nodes declare inputs/outputs, authorization, transactions, cancellation, durability and effects; invokes/reads/writes/emits/requires edges link transports to shared business logic. See [Operations / Services](22-application-operations-and-services.md).
+
+### Projection-specific fingerprints
+
+Maintain deterministic application, database, api, auth, admin, jobs, realtime, docs and mcp fingerprints plus node hashes. Include projection schema/version, canonical semantic fields and relevant dependency closure. Database identity covers stored columns/constraints/persisted relationships; API covers wire schemas/routes/errors; auth covers policies/scopes; admin covers exposure/mutation modes; jobs covers envelopes/retry contracts; realtime covers protocols/policies; docs covers canonical content; MCP covers exposed contracts/capabilities.
+
+Exclude absolute paths, timestamps, process IDs, addresses, runtime values, observations and unordered maps. An admin-label change cannot invalidate migrations; prose cannot invalidate wire clients. Policy changes invalidate affected admin/MCP/realtime contracts through dependency closure. Schema tools use database fingerprints, clients use API fingerprints, mutation preconditions use relevant operation/auth/MCP identities. Hashes detect change, not compatibility or authority. Algorithm/canonicalization remain VALIDATION REQUIRED.
+
+
 ## Open decisions and interpretation
 
 Exact storage representation, macro/public trait ergonomics, extension evolution, rename-stable identities, and complete feature-node coverage remain open. Graph examples are structural sketches.

@@ -10,6 +10,21 @@ Tokio supplies the multi-threaded async runtime. Rjango supplies approachable AP
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Cancellation and shutdown
+
+Important operations declare CancellationSafe, CancellationLeavesRecoverableState, or NonInterruptiblePhase semantics. Cancelling a future stops waiting, not necessarily server-side work. Cancellation before commit cannot be reported as success; cancellation during commit can leave an unknown outcome that must be reconciled through durable operation/idempotency state before retrying. Pool recovery and blocking-task termination cannot be assumed.
+
+Shutdown marks readiness false, stops ingress and worker intake, drains tracked requests/jobs, signals cancellation, records recoverable work, flushes telemetry and closes dependencies. Every phase has a finite configurable deadline inside one total budget. Numeric defaults remain PROPOSED. Noninterruptible phases need bounded timeouts or explicit recovery. Unfinished leased jobs recover after expiry; committed outbox intents survive; request-spawned tasks are never durable work.
+
+### Unified bounded-resource/backpressure model
+
+HTTP bodies/connections, database pools, blocking executors, workers, outbox relays, realtime subscribers, MCP requests and telemetry exporters declare concurrency, queue-count/byte, payload and time limits, including tenant/identity quotas where needed. Admit before expensive allocation. Saturation selects bounded wait, rejection/retry-after, ephemeral drop or disconnect explicitly. Durable intent is never silently dropped: storage exhaustion rejects admission or fails its transaction. Avoid waiting on nested limits while holding scarce database connections. Expose saturation, queue age and rejection metrics with bounded cardinality. Global quotas and numeric defaults require validation.
+
+
 ## Open decisions and interpretation
 
 Public blocking-helper syntax, detailed cancellation budgets, runtime tuning, and the full operational/performance contract require further design or validation.

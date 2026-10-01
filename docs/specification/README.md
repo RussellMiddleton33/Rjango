@@ -1,13 +1,18 @@
 # Rjango master specification
 
+**Master status: REVIEW CANDIDATE 1 — NOT FROZEN.** Latest review corrections are incorporated at specification level; implementation planning and coding remain unauthorized.
+
+Read the [architecture review and amendment crosswalk](../reviews/architecture-review-candidate-1.md), [Application Operations / Services](22-application-operations-and-services.md), and [core durability/message contracts](23-durability-and-message-contracts.md). Topic sections titled “Review Candidate 1 amendment” take precedence over conflicting retained sketches. The first conceptual cross-system review is complete; independent review, remaining design work and experimental validation remain open.
+
 Rjango is an async-first, type-safe Rust web framework design combining Django-style productivity with modern APIs, explicit security boundaries and structured tooling for humans and agents. It is **AI-native but never AI-dependent**.
 
-This is the durable source of truth for the architecture designed so far. It preserves the existing conversation through Part IV and records remaining gaps. **This is a design snapshot, not an implemented framework, validated dependency set, or implementation roadmap.** No implementation planning should begin before the remaining design areas and final cross-system review are complete.
+This is the durable source of truth for the architecture designed so far. It preserves the earlier conversation through Part IV and incorporates the latest adversarial review and all 22 requested amendments. Part V is not yet fully captured. **This is a design snapshot, not an implemented framework, validated dependency set, or implementation roadmap.** No implementation planning or coding is authorized by this candidate.
 
 ## Status legend
 
 | Status | Meaning |
 | --- | --- |
+| **REVIEW CANDIDATE 1** | Document-set maturity: amendments integrated for independent review; neither frozen nor experimentally validated. |
 | **PROPOSED** | Candidate design, illustrative syntax, alternative or unresolved question. |
 | **SPEC-LOCKED** | Agreed architectural direction or requirement; changing it requires an explicit recorded decision. It need not be implemented or experimentally proven. |
 | **VALIDATION REQUIRED** | The claim needs supporting prototype, test, benchmark, compatibility or operational evidence. May accompany SPEC-LOCKED. |
@@ -23,11 +28,11 @@ The settled principles below are SPEC-LOCKED; examples and explicitly open decis
 | Specification | Design coverage / remaining boundary |
 | --- | --- |
 | [00 · Vision and principles](00-vision-and-principles.md) | The final 1.0 scope and release contract remain open. Early release milestones in historical discussion are superseded by the requirement to finish the design first. |
-| [01 · Runtime architecture](01-runtime-architecture.md) | Public blocking-helper syntax, detailed cancellation budgets, runtime tuning, and the full operational/performance contract require further design or validation. |
+| [01 · Runtime architecture](01-runtime-architecture.md) | Public blocking-helper syntax, numeric cancellation/shutdown budgets, runtime tuning, and the full operational/performance contract require further design or validation. |
 | [02 · Application Metadata Graph](02-application-metadata-graph.md) | Exact storage representation, macro/public trait ergonomics, extension evolution, rename-stable identities, and complete feature-node coverage remain open. Graph examples are structural sketches. |
 | [03 · Models and ORM](03-models-and-orm.md) | The final locks and open decisions are preserved below. In particular, model macro form, `F`/`R` syntax, creation/builders, partial selections, loaded-state representation, and backend wrapping require evidence before syntax is frozen. |
 | [04 · Migrations and schema management](04-migrations.md) | Migration file representation, exact commands, opaque field identities, rename UX, and detailed backend support remain open. A safety label is a review aid, not proof an operation is harmless. |
-| [05 · Applications and modules](05-app-system.md) | The full plugin/package compatibility contract remains unspecced; app descriptor and lifecycle signatures are illustrative. |
+| [05 · Applications and modules](05-app-system.md) | Compile-time trusted plugins and macro/runtime compatibility requirements are specified; exact package/version policy remains open; app descriptor and lifecycle signatures are illustrative. |
 | [06 · HTTP and routing](06-http-and-routing.md) | Exact routing/middleware syntax and full proxy/deployment guidance remain open. Examples express contracts, not a usable framework API. |
 | [07 · Schemas and validation](07-schemas-and-validation.md) | Detailed validator extension APIs, schema evolution compatibility, and exact derive/macro syntax remain open. |
 | [08 · API framework](08-api-framework.md) | Idempotency storage, versioning defaults, final resource syntax, SDK scope, and precise compatibility rules remain open. |
@@ -38,12 +43,14 @@ The settled principles below are SPEC-LOCKED; examples and explicitly open decis
 | [13 · Caching](13-caching.md) | See the retained lock/open list. Backend defaults and distributed stampede/invalidation behavior remain open. |
 | [14 · Storage and files](14-storage.md) | See the retained lock/open list. Public file-field types, lifecycle details, and provider capability contracts remain open. |
 | [15 · Email and notifications](15-email-and-notifications.md) | See the retained lock/open list. Notification channels, templating choices, and backend guarantees remain open. |
-| [16 · Realtime](16-realtime.md) | See the retained lock/open list. Distributed broker choice, reconnect guarantees, authorization revalidation, and cross-node semantics need fuller design. |
+| [16 · Realtime](16-realtime.md) | See the retained lock/open list. Distributed broker choice, reconnect guarantees, maximum revalidation windows and cross-node guarantees require validation. |
 | [17 · Events and lifecycle](17-events-and-lifecycle.md) | See the retained lock/open list. Listener execution/failure defaults, cycle safeguards, and exact lifecycle signatures remain open. |
 | [18 · Configuration and environments](18-configuration.md) | See the retained lock/open list. Live reload classes, secret refresh, feature flags, and configuration mutation need fuller design. |
 | [19 · Quality and documentation requirements](19-quality-and-documentation.md) | Shared requirements; validation remains outstanding. |
 | [20 · Cross-system invariants](20-cross-system-invariants.md) | Shared requirements; validation remains outstanding. |
 | [21 · Remaining design inventory](21-design-backlog.md) | Outstanding design areas; no execution sequence. |
+| [22 · Application Operations / Services](22-application-operations-and-services.md) | Shared business boundary for HTTP, Admin, Realtime, CLI, Jobs and MCP; ergonomics/evidence open. |
+| [23 · Durability and message contracts](23-durability-and-message-contracts.md) | Core outbox, versioned envelopes, at-least-once delivery and recovery; backend choices/evidence open. |
 
 ## Supporting documentation
 

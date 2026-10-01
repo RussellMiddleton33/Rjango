@@ -10,6 +10,15 @@ Admin is an explicitly enabled projection of shared model metadata with separate
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Mutation modes
+
+Admin explicitly declares ReadOnly, DirectCRUD or OperationBacked per action/resource. ReadOnly has no write path. DirectCRUD is deliberate simple-model exposure and still enforces validation, scopes, field permissions, concurrency, transactions and audit. Domain transitions/durable effects use OperationBacked commands with explicit form mappings; no fallback direct write may bypass invariants. Bulk mutations declare one-database atomicity or explicit per-item outcomes/recovery. UI visibility never substitutes for server-side policy.
+
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. UI technology, detailed visual design, extension packaging, and final action syntax are not settled.

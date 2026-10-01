@@ -10,6 +10,32 @@ The design requires meaningful tests and excellent documentation for humans and 
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Strengthened evidence requirements
+
+Retain 100% practically testable framework-owned line coverage with justified exclusions; meaningful branch/mutation/adversarial tests remain independently required. Evidence must include:
+
+- Equivalent outcomes/denials across all six operation adapters and no Admin bypass.
+- Provenance/completeness, stale overlays, deterministic projection hashes and unrelated-change isolation.
+- Relation unloaded/empty/null/value states, partial-row safety and no hidden I/O.
+- Real PostgreSQL mixed phases, concurrent migrators/lock loss, crash at every DDL/ledger boundary, partial objects, checksums, IR upgrades and historical replay.
+- Outbox commit/rollback, relay crashes before/after acknowledgement, duplicates, poison messages, dedup expiry, ordering/retention; isolated databases and multiple connections for commit/locking tests rather than outer rollback fixtures.
+- Old/new producer/consumer and realtime protocol matrices, payload upgrades, unknown versions, replay and revoked origins.
+- Cancellation at acquisition/query/commit/dispatch, unknown outcome reconciliation, pool recovery, lease expiry, shutdown deadlines and saturated-resource backpressure.
+- Tenant leakage through counts/exports/joins/caches/streams, delegation attenuation/revocation, MCP token/audience rejection, stale fingerprints and idempotency conflicts.
+- Problem Details redaction/status/type stability, TypeScript numeric/date precision round trips, Secret<T> serialization rejection/leak tests.
+- Macro/runtime skew/features, plugin trust boundaries, replica lag/failover and no accidental cross-database atomicity promise.
+
+Fake backends cannot establish real durability or backend compatibility. Evidence records dependency versions, environment, fault injection, result and limits. No prototype/test result is claimed by this documentation amendment.
+
+### Shared canonical human/AI source
+
+One versioned semantic source feeds human/agent reference, CLI explain, error docs and MCP documentation where practical. Preserve IDs, versions, evidence status and source links. Human tutorials add pedagogy without redefining contracts; generated references cannot replace tutorials/how-to/explanation. Drift checks compare schemas/errors/commands; eventual runnable examples compile against supported versions. Until then, label design illustrations.
+
+
 ## Open decisions and interpretation
 
 Testing-framework design, documentation architecture/tooling, versioned agent resources, and the full Django curriculum remain partially specified.

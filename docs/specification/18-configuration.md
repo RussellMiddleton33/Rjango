@@ -10,6 +10,15 @@ Typed settings merge through deterministic layers with provenance, startup valid
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Secret values and resource budgets
+
+Secret<T> is nonserializable by default: ordinary serialization must not reveal contents. Debug/display, telemetry, errors, AMG, docs and core MCP are redacted. Exposure requires a narrowly named deliberate application action, never implicit conversion/blanket serialization. Redaction is not memory zeroization; copying/retention/zeroization require separate validation. Secret introspection exposes existence/source/rotation health only. Validate resource/shutdown budgets and reject unsupported unbounded or contradictory settings.
+
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Live reload classes, secret refresh, feature flags, and configuration mutation need fuller design.

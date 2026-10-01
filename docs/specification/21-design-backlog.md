@@ -4,7 +4,7 @@
 
 **Status:** PROPOSED / partially specified. **Evidence:** VALIDATION REQUIRED.
 
-The existing design covers the major application systems, but the complete Rjango 1.0 specification is not finished. The following are design questions and coverage gaps, not an implementation plan or execution order. The final cross-system review must precede any implementation planning.
+The existing design covers the major application systems, but the complete Rjango 1.0 specification is not finished. The following are design questions and coverage gaps, not an implementation plan or execution order. The first adversarial review is incorporated in REVIEW CANDIDATE 1. Independent review, complete remaining design coverage and explicit authorization are still required before implementation planning.
 
 | Area | Preserved starting point | Remaining design boundary |
 | --- | --- | --- |
@@ -88,3 +88,9 @@ Final Rjango 1.0 contract
 ```
 
 No implementation roadmap should be created until those areas and the final cross-system architecture review are complete.
+
+## Candidate 1 disposition
+
+[Operations / Services](22-application-operations-and-services.md) and [outbox/message contracts](23-durability-and-message-contracts.md) now have dedicated specifications. Provenance, fingerprints, migration phases, tenant/delegation policy, remote MCP boundaries, plugin trust and wire mapping requirements are integrated in their topic files. Their implementation APIs, numeric defaults and evidence remain unresolved; they are no longer wholly absent architectural primitives.
+
+Part V retrieval was truncated. Do not mark its developer-platform/operations/ecosystem/release-contract inventory complete from the excerpt. This is remaining specification work, not an implementation sequence.

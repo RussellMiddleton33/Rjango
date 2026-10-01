@@ -10,9 +10,18 @@ Subsystems share metadata, identity, configuration, errors, observability, audit
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Candidate 1 shared invariants
+
+All six surfaces share operation rules; transport exposure grants no business authority. AMG exposes provenance/completeness/projection identity. Rows, descriptors and loaded values are distinct. Stable migration IR/checksums/single-migrator/step recovery are required. Database plus durable intent commit in one database; delivery is at least once. Identity/delegation, tenant/query scopes, wire types, cancellation and resource bounds span every subsystem. Core MCP never returns raw secrets; production has zero-data-access defaults. See [review disposition](../reviews/architecture-review-candidate-1.md).
+
+
 ## Open decisions and interpretation
 
-A final cross-system design review remains outstanding. These invariants must be reconciled with each remaining area before implementation planning.
+The first cross-system review is incorporated in Candidate 1. Independent review and reconciliation with remaining design areas remain outstanding; no implementation planning is authorized.
 
 
 

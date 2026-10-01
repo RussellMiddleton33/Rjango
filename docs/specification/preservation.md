@@ -528,3 +528,7 @@ Every numbered section of the five existing specifications is accounted for belo
 | 154. Rjango's Emerging Programming Model | [20-cross-system-invariants](20-cross-system-invariants.md) |
 | 155. Architectural North Star | [20-cross-system-invariants](20-cross-system-invariants.md) |
 | 156. Status After Part IV | [21-design-backlog](21-design-backlog.md) |
+
+## Review Candidate 1 reconciliation — 2026-09-30
+
+The [durable architecture review](../reviews/architecture-review-candidate-1.md) maps all 22 amendments to authoritative topic sections and records source truncation. Earlier conversation sections remain preserved; conflicting migration atomicity, relation-state, fingerprint and MCP-secret sketches are superseded by Candidate 1 amendments. No original section is deleted and no experimental validation is implied. Part V remains incompletely captured.

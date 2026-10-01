@@ -10,6 +10,15 @@ Domain facts, durable jobs, ephemeral realtime messages, and framework lifecycle
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 1 amendment
+
+**Status:** architectural requirements adopted; syntax and experimental claims remain VALIDATION REQUIRED. This amendment takes precedence over conflicting historical sketches below.
+
+### Durability and lifecycle
+
+Durable events use the [outbox/envelope contract](23-durability-and-message-contracts.md); local listeners are explicitly non-durable. Durable listeners bridge database outcomes to subsequent durable effects through their own outbox or a documented backend guarantee. Replays preserve identity/version/idempotency semantics. Lifecycle hooks are tracked, cancellation-classified and subject to the [total shutdown budget](01-runtime-architecture.md).
+
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Listener execution/failure defaults, cycle safeguards, and exact lifecycle signatures remain open.
