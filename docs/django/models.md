@@ -38,3 +38,12 @@ Django QuerySet
 Rjango QuerySet
     lazy, typed, async and database context explicit
 ```
+
+## Candidate 2 differences
+
+- `db` is the **scoped** handle from `ctx.db()`. Tenant-owned models (`#[rjango::model(tenant = organization_id)]`) are filtered automatically. Django managers have no such default.
+- Relations are declared on foreign-key fields. Rows contain no relation fields, and loaded relations are read via `Loaded<M>` accessors.
+- A model generates `Venue`, `NewVenue`, `VenuePatch`, `Venue::F` and `Venue::R`, all visible in rustdoc.
+- Models are never returned from API handlers. Derive output schemas with explicit field lists, the Rjango counterpart of `ModelSerializer`.
+- `#[version]` gives optimistic concurrency, used by Admin and resource updates.
+- Unsigned integer fields are not database types. Use signed types with `#[range(min = 0)]`.

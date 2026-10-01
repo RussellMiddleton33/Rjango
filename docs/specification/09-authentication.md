@@ -10,6 +10,21 @@ Authentication establishes an identity through interchangeable mechanisms. The u
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (M4, M11, C1). This topic had no Candidate 1 amendment; this section reconciles it with [operations](22-application-operations-and-services.md), [tenancy and delegation](10-authorization-and-security.md) and [durability](23-durability-and-message-contracts.md). Claims remain VALIDATION REQUIRED.
+
+- **Identity in context.** Authentication produces the actor placed in `Ctx` ([22](22-application-operations-and-services.md)). The Django habit of reading `request.user` maps to `ctx.actor()`, which is typed as a principal enum (anonymous, user, service account, API key, agent). `CurrentUser` is an extractor that rejects anonymous callers. The tenant is derived from authenticated membership and never from the payload alone.
+- **Auth user contract.** One registered auth user model whose primary key is `rjango::auth::UserId` ([05](05-app-system.md)). The default user model satisfies it.
+- **Password hashing.**
+  - The default is Argon2id with versioned parameters (PROPOSED values, VALIDATION REQUIRED against latency and memory budgets).
+  - Hashing runs on the bounded blocking executor with a dedicated admission limit ([01](01-runtime-architecture.md)). A login flood queues or rejects instead of starving runtime threads.
+  - Verification is constant-time, and unknown users run a dummy verification to equalize timing.
+- **Django migration path.** Imported password hashes in Django's formats (`pbkdf2_sha256`, `argon2`, `bcrypt_sha256`, and others documented explicitly) are verified natively and rehashed to the current policy on successful login. This avoids forced password resets. Django user tables usually have integer primary keys, while `UserId` is a UUID. Importing them therefore needs an ID-mapping migration: new `UserId`s are generated, the Django integer is kept as an indexed `legacy_id`, and foreign keys referencing users are rewritten through the mapping. The migration tooling generates this mapping. Unsupported hash formats require a reset flow and are reported by an import check.
+- **Durable auth side effects.** Verification and password-reset email and audit events are written as outbox intents in the same transaction as the token creation, never dispatched after commit.
+- **Sessions in long-lived connections.** Logout, revocation and privilege change publish invalidation events consumed by realtime revalidation ([16](16-realtime.md)).
+- **Admin re-authentication.** Admin sensitive actions require recent authentication within a configurable window, enforced in the operation policy.
+
 ## Open decisions and interpretation
 
 Provider choices and detailed credential recovery, OIDC, passkey, MFA, session-revocation and key-lifecycle flows require fuller design. Inclusion in the specification is not availability.

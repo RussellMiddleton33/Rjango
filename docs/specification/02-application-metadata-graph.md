@@ -27,6 +27,35 @@ Maintain deterministic application, database, api, auth, admin, jobs, realtime, 
 Exclude absolute paths, timestamps, process IDs, addresses, runtime values, observations and unordered maps. An admin-label change cannot invalidate migrations; prose cannot invalidate wire clients. Policy changes invalidate affected admin/MCP/realtime contracts through dependency closure. Schema tools use database fingerprints, clients use API fingerprints, mutation preconditions use relevant operation/auth/MCP identities. Hashes detect change, not compatibility or authority. Algorithm/canonicalization remain VALIDATION REQUIRED.
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (H4, H10, M2, M5, M6, L4, L5, M1). Syntax is illustrative; claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment and retained sketches below.
+
+### Registration of roots only
+
+Applications register **roots**: models, operations/routes/resources, jobs, listeners, channels, settings, admin registrations and commands. Schemas, enums and nested types referenced by a root's typed signature are collected transitively through the generated metadata traits. Explicit `.schema::<T>()` registration (as in the "Registration Model" sketch below) is needed only for schemas that no root references. The validation error "Route references missing schema" therefore cannot occur for typed references. Unregistered roots produce no hidden behaviour. `rjango check` lists models, policies and jobs that are declared in source but not registered: the analogue of a forgotten `INSTALLED_APPS` entry.
+
+### Where checks run
+
+The AMG is built from compile-generated descriptors when the application starts, or in metadata-only introspection mode ([24](24-developer-experience-and-diagnostics.md)). Cross-type validation (relation targets, foreign-key compatibility, policy references, exposure declarations) is an **AMG validation error**, reported at startup and by `rjango check` with source spans. It is not a compile error. The "compile-generated, verified before the server starts" north star means *before serving*, not *at compile time*.
+
+### Metadata identity lockfile
+
+Stable IDs default to `app.name` derived from Rust names. Exposed IDs (models, fields, operations, routes, jobs, events, channels, MCP tools, error codes) are recorded in a checked-in `rjango.ids.lock`, maintained by `rjango check --update-ids` and reviewed like migrations. When a Rust rename would change a recorded ID, the change is reported as removed plus added and must be resolved: keep the old ID with `#[rjango(id = "...")]`, or accept the new ID and explicitly invalidate in-flight idempotency keys, previews and client contracts. Behaviour in the "Route Metadata" and "Edge Types" sketches below, where `route:users.create_user` and `route:users.create` are both used, is illustrative. Rename-stable field identity for migrations follows the same lockfile.
+
+### Fingerprints detect declared change, not behaviour
+
+Projection fingerprints hash declared metadata. An edit to a policy function body changes behaviour without changing the auth fingerprint. Policy descriptors therefore include a declared `version` and a macro-computed hash of the annotated policy function's token stream. That hash is not transitive across helper functions; this limitation is documented, and the Candidate 1 claim that policy changes invalidate dependent contracts holds only for declared metadata and the annotated body. MCP and preview preconditions must re-run authorization at execution time and never treat a matching fingerprint as behavioural equivalence ([MCP](../ai/mcp-architecture.md)).
+
+### Type system corrections
+
+- Unsigned scalars (`U16`/`U32`/`U64` in "Type System" below) are excluded from **DatabaseType** in 1.0. PostgreSQL has no unsigned integers. Model fields use signed types with `#[range(min = 0)]`, which emits a `CHECK` constraint, and the macro suggests this when an unsigned type is used. Unsigned types remain valid **WireType**s ([07](07-schemas-and-validation.md)).
+- A model without a primary key is an error, not a warning (L4).
+- "Public endpoint returns internal model directly" becomes a compile error: models never implement output schemas ([07](07-schemas-and-validation.md)), so the AMG warning is unnecessary.
+- Paths in sketches below written `/users/:id` are SUPERSEDED by `/users/{id}` (Axum 0.8 syntax; [06](06-http-and-routing.md)).
+- "Rjango v0.1 should support these node types" is historical scoping language; node coverage is defined by the subsystem specifications.
+- MCP context-size figures below ("80,000" versus "3,000" tokens) are illustrative, not measured.
+
 ## Open decisions and interpretation
 
 Exact storage representation, macro/public trait ergonomics, extension evolution, rename-stable identities, and complete feature-node coverage remain open. Graph examples are structural sketches.
@@ -1195,6 +1224,8 @@ Framework quality here matters enormously.
 
 <!-- Source: amg section 28. -->
 ## Warnings
+
+> **Candidate 2 note:** "Model has no primary key" below is an AMG error, and "Public endpoint returns internal model directly" is a compile error. Neither is a warning.
 
 Not everything should stop compilation/startup.
 
@@ -2436,6 +2467,8 @@ This is critical.
 
 <!-- Source: amg section 68. -->
 ## First Prototype
+
+> **Candidate 2 note:** paths are written `/users/{id}`, and handlers return derived output schemas. See the amendment above.
 
 Our first end-to-end AMG test should contain:
 

@@ -4,6 +4,8 @@
 
 **Status:** PROPOSED historical material; SUPERSEDED wherever later topic specifications refine it. **Evidence:** VALIDATION REQUIRED.
 
+> **Candidate 2 reading note:** examples here using `/users/:id` paths, handlers returning models, `User::objects()`, `#[permission(...)]` as business authorization, `send_welcome_email::dispatch(...)` outside a transaction, a base `rjango.toml` with `environment = "development"` and `[mcp] enabled = true`, and the `secrets.read` MCP permission are all SUPERSEDED. See the [master specification](../README.md) precedence rules and [20](../20-cross-system-invariants.md) for the conforming programming model.
+
 This retains the initial architecture to avoid losing early rationale and outlines for areas not yet fully specced. Read the canonical topic documents first. Early examples using ambient database lookup, automatic CRUD exposure, mutable metadata, or unqualified MCP mutation permission are superseded by explicit DB context, opt-in exposure, immutable AMG, and separate permissions. API syntax, CLI commands, generated output and performance claims are illustrative.
 
 The original sections 35–38 described development phases, initial milestones, engineering tickets, and an early v0.1 scope. They are SUPERSEDED by the later instruction to finish all design and the final cross-system review before any implementation planning. They are intentionally not reproduced as an active or historical execution plan. Early “Phase one/Later” labels elsewhere are historical scope suggestions, not current sequencing. The final 1.0 release contract remains open.

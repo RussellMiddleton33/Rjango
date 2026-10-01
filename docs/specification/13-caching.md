@@ -10,6 +10,16 @@ Caching has explicit namespaces, serialization versions, TTLs, invalidation, and
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (H8, M11). This topic had no Candidate 1 amendment; this section reconciles it with [tenancy](10-authorization-and-security.md). Syntax is illustrative; claims remain VALIDATION REQUIRED.
+
+- **Typed keys.** Keys are typed (illustrative: `#[rjango::cache_key("venue_summary", version = 2)] struct VenueSummaryKey { venue_id: Uuid }`). The framework prefixes the application, environment, key name, schema version and **the tenant from `Ctx`** automatically. Raw string keys (`cache.set("venue:123", ...)` below) are SUPERSEDED for application data. Tenant-independent data requires an explicit `global` key declaration, which `rjango check` lists.
+- **Authorization-dependent values.** Cached values derived from policy-scoped queries include the policy identity and the actor's scope-relevant attributes in the key, or are cached only after scoping at a tenant-wide grain. Cache-aside helpers take the scoped `Db` and refuse `SystemDb` results unless the key is declared `global`.
+- **Serialization.** Values serialize with the key's declared version. A version mismatch is a miss, never a guess.
+- **Hidden I/O.** Cache calls are explicit `.await`ed operations. Per-request caches are in-memory only.
+- **No secrets.** `Secret<T>` does not implement serialization, so it cannot be cached by construction ([18](18-configuration.md)).
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Backend defaults and distributed stampede/invalidation behavior remain open.
@@ -67,6 +77,8 @@ This avoids accidental cross-environment/key collisions.
 
 <!-- Source: iv section 48. -->
 ## Typed Cache API
+
+> **SUPERSEDED (Candidate 2):** raw string keys are replaced by typed, tenant-prefixed keys; see the amendment above.
 
 Conceptual:
 

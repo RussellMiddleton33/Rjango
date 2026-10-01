@@ -36,6 +36,40 @@ Fake backends cannot establish real durability or backend compatibility. Evidenc
 One versioned semantic source feeds human/agent reference, CLI explain, error docs and MCP documentation where practical. Preserve IDs, versions, evidence status and source links. Human tutorials add pedagogy without redefining contracts; generated references cannot replace tutorials/how-to/explanation. Drift checks compare schemas/errors/commands; eventual runnable examples compile against supported versions. Until then, label design illustrations.
 
 
+## Review Candidate 2 amendment
+
+**Status:** evidence requirements added from the [independent review](../reviews/independent-review-candidate-1.md). No result is claimed.
+
+Additional evidence:
+
+- **Developer usability.**
+  - A recorded study of Django developers who do not know Rust completing the Tier 0 tutorial, recording concepts met, compiler errors met and time taken ([22](22-application-operations-and-services.md)).
+  - A compile-fail message suite reviewed by Rust newcomers.
+  - rust-analyzer completion under macro input errors.
+  - Rebuild-time budgets on the reference application ([24](24-developer-experience-and-diagnostics.md)).
+- **Default-deny and scoping.**
+  - Every registered surface has a policy or `public`.
+  - Every QuerySet terminal, relation load, bulk operation, stream, Admin dynamic query and resource filter is scoped.
+  - Using `SystemDb` without declaration fails.
+  - Scope/check agreement property tests per policy.
+- **Transactions.**
+  - `RJG-DB-TX-OUTSIDE` detection.
+  - Compile-fail tests for concurrent use of `&mut tx` and use after commit.
+  - The commit-outcome-unknown path.
+  - Rollback on drop, panic and cancellation.
+- **Cancellation.** Command shielding across HTTP/1.1 and HTTP/2 disconnects; Query cancellation; shielded-task drain during shutdown.
+- **Rolling deploys.** The old/new binary × old/new schema matrix; readiness gating outside the compatibility window; development-only auto-apply.
+- **Security.**
+  - WebSocket/SSE Origin rejection.
+  - SSRF egress policy against private, metadata, IPv6-mapped and redirect/DNS-rebinding cases.
+  - Signed-URL TTL limits.
+  - MCP untrusted-content labelling and refusal of code-execution capabilities in production.
+  - Unset environment resolves to production.
+  - Base-file security keys are ignored outside development.
+- **Data access.** `Loaded<M>` NotLoaded/LoadedEmpty/LoadedNull/value accessors; DynamicModel field and scope enforcement; `bulk_update` audit/version/`auto_now` semantics; Django password-hash import and rehash.
+
+Test fixtures that wrap each test in an outer rollback cannot verify commit, outbox or locking behaviour; those use isolated databases, as the Candidate 1 amendment requires.
+
 ## Open decisions and interpretation
 
 Testing-framework design, documentation architecture/tooling, versioned agent resources, and the full Django curriculum remain partially specified.

@@ -34,6 +34,26 @@ Every topic page includes open questions. Particularly significant ones include 
 
 Existing prototypes, benchmark matrices and test scenarios in the ORM specification are retained as evidence requirements. They have not been run by this capture and are not a roadmap. Earlier engineering tickets, phases and sequencing were superseded by the user's later design-first instruction.
 
+## Candidate 2 disposition
+
+The [independent review](../reviews/independent-review-candidate-1.md) moved several items from this inventory into architectural direction. These are now partly specified:
+
+- the core error model, diagnostics contract, development loop (rebuild budgets, introspection mode, dev-server restart semantics, shell replacement) and MSRV/edition floor ([24](24-developer-experience-and-diagnostics.md));
+- the progressive-complexity contract ([22](22-application-operations-and-services.md));
+- tenancy and optimistic concurrency, moved out of "advanced database capabilities" into core ([03](03-models-and-orm.md), [10](10-authorization-and-security.md));
+- deployment compatibility for schema changes ([04](04-migrations.md)).
+
+Still open:
+
+- full CLI taxonomy;
+- the testing harness API;
+- observability conventions;
+- error localization;
+- complete MSRV and semver policy;
+- templates, forms and i18n;
+- multi-database routing;
+- the remaining rows of the table above.
+
 ## Original design-status record
 
 <!-- Source: iv section 156. -->

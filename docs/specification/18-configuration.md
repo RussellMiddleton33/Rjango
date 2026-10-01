@@ -19,6 +19,41 @@ Typed settings merge through deterministic layers with provenance, startup valid
 Secret<T> is nonserializable by default: ordinary serialization must not reveal contents. Debug/display, telemetry, errors, AMG, docs and core MCP are redacted. Exposure requires a narrowly named deliberate application action, never implicit conversion/blanket serialization. Redaction is not memory zeroization; copying/retention/zeroization require separate validation. Secret introspection exposes existence/source/rotation health only. Validate resource/shutdown budgets and reject unsupported unbounded or contradictory settings.
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (H7, M1). Claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment and retained sketches below.
+
+### Environment selection fails safe
+
+- The active environment comes from `RJANGO_ENV` or an explicit CLI flag.
+- **If it is unset, the environment is `production`.** The application never falls back to development.
+- `rjango dev` and `rjango test` set `development` and `test` explicitly.
+- A production process whose configuration enables a development-only capability refuses to start with a CRITICAL diagnostic. Development-only capabilities include debug error pages, development MCP, `db sync`, development email inboxes and auto-applied migrations.
+
+### Security-sensitive keys are not inherited from the base file
+
+The layering below still applies, with one exception. Keys classified **security-sensitive** in the configuration schema, when set in the base `rjango.toml`, apply only to the `development` and `test` profiles. Every other profile (production, staging, custom) uses the framework's secure default unless the key is set in that profile's file, environment variables or runtime override. Security-sensitive keys include:
+
+- `mcp.*`
+- debug and error detail
+- CORS origins
+- cookie `Secure`/`SameSite`
+- trusted proxies and hosts
+- metadata HTTP exposure
+- development tools
+- rate-limit disablement
+- realtime trusted origins
+
+`rjango config show` displays ignored base values with the reason. This implements "No inheritance from development permissions" ([10](10-authorization-and-security.md)). The historical template in [initial architecture](history/initial-architecture.md), which sets `environment = "development"` and `[mcp] enabled = true` in the base file, is SUPERSEDED. The generated project puts development values in `rjango.development.toml`.
+
+### Secrets and MCP
+
+"`secrets.read` remains an extraordinarily privileged separate capability" in "Configuration + MCP" below is SUPERSEDED. Core MCP has no raw-secret capability ([MCP](../ai/mcp-architecture.md)). `Secret<T>` implements `Deserialize` (so it can be loaded) but not `Serialize`; values are revealed only by an explicitly named method in application code.
+
+### Reusable-app configuration
+
+App configuration structs from [05](05-app-system.md) are part of the configuration schema under the app's namespace, with code-supplied defaults overridable per environment.
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Live reload classes, secret refresh, feature flags, and configuration mutation need fuller design.
@@ -332,6 +367,8 @@ not:
 ```
 secret value: abc123
 ```
+
+> **SUPERSEDED (Candidates 1 and 2):** core MCP has no `secrets.read` capability.
 
 `secrets.read` remains an extraordinarily privileged separate capability.
 

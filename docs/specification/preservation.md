@@ -531,4 +531,6 @@ Every numbered section of the five existing specifications is accounted for belo
 
 ## Review Candidate 1 reconciliation — 2026-09-30
 
+**Candidate 2:** the [independent review](../reviews/independent-review-candidate-1.md) adds "Review Candidate 2 amendment" sections, ADRs 0010–0015, specification 24, Django guides (`everyday-workflow.md`, `rust-concepts.md`) and inline SUPERSEDED notes at conflicting example sites. No original section is deleted; superseded sketches remain for history.
+
 The [durable architecture review](../reviews/architecture-review-candidate-1.md) maps all 22 amendments to authoritative topic sections and records source truncation. Earlier conversation sections remain preserved; conflicting migration atomicity, relation-state, fingerprint and MCP-secret sketches are superseded by Candidate 1 amendments. No original section is deleted and no experimental validation is implied. Part V remains incompletely captured.

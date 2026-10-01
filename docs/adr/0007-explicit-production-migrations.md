@@ -30,4 +30,15 @@ This ADR records an architectural agreement, not completed implementation or a p
 
 ## Candidate 1 clarification
 
-The [architecture review](../reviews/architecture-review-candidate-1.md) retains this foundational decision and records its strengthened boundaries. Observed AMG evidence remains a separate overlay; migrations use phase/step recovery and checksums; core MCP never exposes raw secrets and defaults to zero production application-data access. These amendments supersede conflicting earlier sketches, with validation still required.
+The [architecture review](../reviews/architecture-review-candidate-1.md) retains this decision and adds phase/step transaction modes, a recovery ledger, a single-migrator lock, checksums and a stable IR.
+
+## Candidate 2 clarification
+
+From the [independent review](../reviews/independent-review-candidate-1.md):
+
+- Migration artifacts are a data IR plus optional Rust data steps against a stable `rjango-migrate` API.
+- Every operation carries an expand/contract/breaking deploy tag, and plans report deploy ordering.
+- Production instances outside the binary's schema compatibility window stay alive but not ready, and never auto-apply.
+- Development auto-apply requires a development-marked database.
+
+See [04](../specification/04-migrations.md).

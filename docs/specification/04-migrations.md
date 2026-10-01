@@ -25,6 +25,51 @@ The ledger records migration/phase/step identity, artifact/IR checksum, started/
 One logical migrator holds a database/graph-scoped lock across all phases, including nontransactional steps. Advisory locking is a candidate; exact fencing/session-loss behavior needs validation. Lock loss stops progress; the successor reconciles unknown steps. Acquisition has bounded wait. Applied checksum mismatches fail closed; edited history never silently replaces applied history. Repair records actor/reason/actual state. IR upgrades preserve meaning with explicit checksum-version handling; unsupported IR fails before mutation.
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (H5, H6, M1, L6). Syntax and file names are illustrative; claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment and retained sketches below.
+
+### Artifact format: data IR plus optional Rust data steps
+
+The open question "whether migrations compile as Rust" is decided:
+
+- **Schema operations** are a canonical, versioned data IR file (illustrative: `migrations/venues/0042_add_description.migration.toml`). It is generated, reviewable and diffable, and it is checksummed exactly as the Candidate 1 amendment requires. It never compiles against application code.
+- **Data steps** are optional Rust functions in a sibling file. They are written against the separately versioned, narrowly scoped `rjango-migrate` API, which has a long stability commitment. They use IR-typed dynamic rows (`ctx.table("venues.Venue")` yields rows typed by the historical IR) and never current model types.
+- A data step that no longer compiles after an upgrade can be retired once every environment's ledger shows it applied. Squashing replaces it with its recorded postcondition.
+
+The `migrations/0042_update_venue.rs` example below is SUPERSEDED by this split.
+
+### Rolling-deploy compatibility
+
+Each operation receives a **deploy compatibility** tag in addition to its safety class:
+
+| Tag | Meaning | Examples |
+| --- | --- | --- |
+| `expand` | Safe while the previous binary is still running | Create table; add nullable column; add column with a non-volatile default; create index concurrently; add constraint `NOT VALID` |
+| `contract` | Safe only after every previous binary has drained | Drop column/table; drop old index; validate a constraint the old binary may violate |
+| `breaking` | Unsafe with any overlap of old and new binaries | In-place rename; type change that the old binary cannot read; `NOT NULL` on a column the old binary does not write |
+
+- `rjango migration plan` reports the required ordering: apply expand steps before deploying the new binary, and contract steps after the old binary is gone.
+- `migration make` splits a rename into an expand/contract sequence when `--rolling` is requested (add, dual-write via a generated trigger or operation, backfill in batches, switch reads, drop). It refuses to label an in-place `#[renamed_from]` rename as rolling-safe.
+- The ORM selects explicit column lists and ignores unknown columns, so expand steps are invisible to the old binary. This is VALIDATION REQUIRED against SeaORM.
+
+### Startup and the compatibility window
+
+Each binary embeds its database fingerprint, the set of migration IDs it **requires**, and the set of applied contract migrations it **tolerates**. At startup, the instance compares these against the ledger:
+
+- **Production and staging:** if required migrations are missing, or an applied migration is incompatible, the instance stays alive but **not ready** and reports a structured diagnostic. It never auto-applies and never crash-loops.
+- **Development:** `rjango dev` may auto-apply pending migrations only when the database's ledger was created with an explicit development marker (`rjango db create --dev`). Otherwise it prompts.
+
+The north-star output in [00](00-vision-and-principles.md) ("7 migrations applied") assumes such a development-marked database.
+
+### Historical data access
+
+`ctx.model("venues.Venue")` in "Historical Models" below becomes `ctx.table(...)` over IR-typed dynamic rows, which share the value types of the `DynamicModel` layer ([03](03-models-and-orm.md)) but not its current-model bindings. Data steps run with `SystemDb` authority and are audited per step.
+
+### Validation required
+
+The old/new binary × old/new schema matrix on PostgreSQL; trigger-based dual-write overhead; long-term compilation of retained data steps across `rjango-migrate` versions; ledger-based readiness under rollbacks.
+
 ## Open decisions and interpretation
 
 Migration file representation, exact commands, opaque field identities, rename UX, and detailed backend support remain open. A safety label is a review aid, not proof an operation is harmless.
@@ -741,8 +786,8 @@ Rjango adds first-class AMG fingerprints, drift analysis, structured safety clas
 
 ### OPEN
 
-- exact migration source format
-- whether migrations compile as Rust
+- exact migration source format (Candidate 2: data IR plus optional Rust data steps; exact serialization open)
+- ~~whether migrations compile as Rust~~ (decided in Candidate 2)
 - stable opaque field identity
 - migration optimizer sophistication
 - online migration automation
@@ -776,6 +821,8 @@ database magically changes
 
 <!-- Source: orm section 41. -->
 ## Migration Command
+
+> **Candidate 2 note:** the artifact is a data IR file plus optional Rust data steps, not `migrations/0042_update_venue.rs`. The plan also reports expand/contract deploy tags.
 
 ```
 rjango migration make

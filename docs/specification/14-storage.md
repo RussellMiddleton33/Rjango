@@ -10,6 +10,23 @@ Storage exposes logical file handles and backend capabilities, with streaming I/
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (H8, M11). This topic had no Candidate 1 amendment; this section reconciles it with [tenancy](10-authorization-and-security.md), [operations](22-application-operations-and-services.md) and [durability](23-durability-and-message-contracts.md). Claims remain VALIDATION REQUIRED.
+
+- **Signed URLs are bearer capabilities.**
+  - Anyone holding a signed URL can use it until it expires, and revoking the user's permission does not invalidate it.
+  - Signed read URLs have a configured maximum TTL (PROPOSED default 15 minutes; hard maximum 7 days, rejected at configuration validation).
+  - Objects classified as sensitive are served through an authorized streaming download operation instead of a long-lived signed URL.
+  - Signed upload URLs bind content length, type and key.
+- **Tenant isolation.** Storage keys for tenant-owned files are generated with a tenant prefix from `Ctx`. Access goes through operations whose policy checks the owning record, never the key alone.
+- **Orphan control in both directions.**
+  - A new upload is `Pending` until the owning record's transaction commits and records it.
+  - A scheduled job deletes pending objects older than a configured window.
+  - Deletion follows the existing mark-deleted, commit, cleanup-job flow, with cleanup dispatched through `tx.dispatch`.
+- **SSRF.** Server-side ingestion from URLs ("fetch remote file") uses the egress-controlled HTTP client ([15](15-email-and-notifications.md)).
+- **Content type.** Detected MIME type, not the declared one, drives serving headers. Uploaded content is served with `Content-Disposition: attachment` by default, plus `X-Content-Type-Options: nosniff`.
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Public file-field types, lifecycle details, and provider capability contracts remain open.

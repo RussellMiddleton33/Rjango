@@ -2,7 +2,7 @@
 
 [Master specification](../specification/README.md) · [Operations](../specification/22-application-operations-and-services.md) · [Security](../specification/10-authorization-and-security.md)
 
-**Status:** REVIEW CANDIDATE 1. Boundaries adopted; transport/schema/version details and conformance remain VALIDATION REQUIRED.
+**Status:** REVIEW CANDIDATE 2. Boundaries adopted; transport/schema/version details and conformance remain VALIDATION REQUIRED.
 
 ## Planes and exposure
 
@@ -39,6 +39,38 @@ Record the executing agent/service actor, human/service subject and ordered atte
 Reviewable mutations bind expected operation/auth/MCP projection fingerprints, target environment/resource, canonical input digest and required concurrency preconditions. Re-evaluate current authorization and those preconditions immediately before execution. Stale contracts reject with structured diagnostics and require reinspection/replanning; an old preview is not approval. A matching fingerprint does not prove unchanged business row state, so row versions/ETags/locks remain necessary.
 
 Retryable commands require scoped idempotency keys. Persist claims/outcomes with the operation's database changes where feasible. Concurrent retries do not execute twice; same key/different input conflicts. Unknown outcome requires reconciliation, not blind replay. Retention/expiry and in-progress response are declared. Returning cached sensitive outcomes still requires current authorization. MCP transport retries do not provide business exactly-once semantics. Destructive/production operations enforce applicable approval policy; neither tokens nor previews silently broaden capability.
+
+## Review Candidate 2 amendment
+
+From the [independent review](../reviews/independent-review-candidate-1.md) (H8, M2, L6). Claims remain VALIDATION REQUIRED.
+
+### Untrusted content and prompt injection
+
+Tool and resource results that contain application data, logs, error messages, user-supplied strings, file contents or third-party responses are **untrusted content**.
+
+- **Labelling.** Results label such fields structurally (illustrative: `{"untrusted": true, "source": "logs", "content": ...}`), separate from framework-authored fields, and escape them so they cannot impersonate framework metadata.
+- **No instruction-following.** Rjango never executes instructions found in data. A tool result never grants or broadens capability.
+- **Approval channel.** Privileged and destructive actions require approval bound to the specific action digest and delivered through a channel outside the agent conversation: the MCP client's confirmation UI, CLI confirmation, or an approval record by an authorized human. An agent-produced "the user approved" is never accepted.
+- **Rate limits.** Inspection tools that return untrusted content (logs, recent errors) have their own capability and are rate-limited.
+
+### Code execution is its own capability class
+
+`tests.run`, `run_check` when it compiles code, `rjango run`, migration data steps and shell execution all execute project code, including build scripts and proc macros, with the invoking user's authority. They form the **CodeExecution** capability class:
+
+- available only to local development MCP under the local OS trust boundary;
+- never enabled in production;
+- never implied by metadata or migration-generation permission;
+- each invocation audited.
+
+The static portion of `rjango check` in metadata-only mode ([24](../specification/24-developer-experience-and-diagnostics.md)) is not code execution against data, but it still runs the compiled application binary and is classified accordingly.
+
+### Development MCP binding
+
+`rjango dev` exposes development MCP over stdio, or on loopback only with a per-session token. It defaults to metadata read and migration generation. Data access requires an explicit local grant and a development-marked database ([04](../specification/04-migrations.md)). A development MCP connected to a database whose ledger is not development-marked refuses data tools, whatever the local configuration says.
+
+### Fingerprints are not behavioural proof
+
+Stale-fingerprint protection detects changes to declared metadata and annotated policy bodies only ([02](../specification/02-application-metadata-graph.md)). Execution always re-runs current authorization.
 
 ## Open validation
 

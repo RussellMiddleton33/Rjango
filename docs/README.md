@@ -1,6 +1,6 @@
 # Rjango documentation
 
-Start with the [master specification](specification/README.md). **Status: REVIEW CANDIDATE 1, not frozen.** Read the [latest architecture review](reviews/architecture-review-candidate-1.md) and its amendment crosswalk. This snapshot preserves the Rjango architecture designed so far; it does not introduce implementation code or a delivery roadmap.
+Start with the [master specification](specification/README.md). **Status: REVIEW CANDIDATE 2, not frozen.** Read the [independent review](reviews/independent-review-candidate-1.md) and its disposition crosswalk, then the [first architecture review](reviews/architecture-review-candidate-1.md). Django developers should start with [Everyday workflow](django/everyday-workflow.md). This snapshot preserves the Rjango architecture designed so far; it does not introduce implementation code or a delivery roadmap.
 
 - [Specifications](specification/README.md): topic design, status, invariants and unresolved areas.
 - [Architecture decisions](adr/README.md): major settled choices and evidence still needed.

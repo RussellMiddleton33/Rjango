@@ -19,6 +19,16 @@ Admin is an explicitly enabled projection of shared model metadata with separate
 Admin explicitly declares ReadOnly, DirectCRUD or OperationBacked per action/resource. ReadOnly has no write path. DirectCRUD is deliberate simple-model exposure and still enforces validation, scopes, field permissions, concurrency, transactions and audit. Domain transitions/durable effects use OperationBacked commands with explicit form mappings; no fallback direct write may bypass invariants. Bulk mutations declare one-database atomicity or explicit per-item outcomes/recovery. UI visibility never substitutes for server-side policy.
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (H6, C1, M1). Syntax is illustrative; claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment and retained sketches below.
+
+- **Dynamic access.** Admin reads and writes through the generated `DynamicModel` layer ([03](03-models-and-orm.md)). Field visibility, editability, sensitivity, scopes and object policies are enforced inside that layer. The admin frontend, API and custom pages cannot bypass them, and browser-supplied field names are accepted only from the admin registration's allowlists.
+- **Scoping is mandatory.** Admin lists, counts, search, filters, exports and relation widgets **must** be scoped before execution. "Should ideally be scoped" in "Object-Level Admin Permissions" below is SUPERSEDED.
+- **DirectCRUD.** DirectCRUD uses the model's `#[version]` field for concurrency. A DirectCRUD registration on a model without a version field must declare `last_write_wins` explicitly, and `rjango check` reports it.
+- **Every admin view and action is an operation** with a declared policy (deny by default; [10](10-authorization-and-security.md)). Admin action functions are annotated operations, so they are reusable from other adapters only when explicitly exposed.
+- **Admin forms.** Admin forms use derived input and patch schemas ([07](07-schemas-and-validation.md)). Registering a model does not make any field editable until it is listed.
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. UI technology, detailed visual design, extension packaging, and final action syntax are not settled.
@@ -385,6 +395,8 @@ but not Organization B
 ```
 
 List queries should ideally be scoped before objects are returned rather than fetching forbidden objects and hiding them afterward.
+
+> **SUPERSEDED (Candidates 1 and 2):** scoping before execution is mandatory, not "ideally".
 
 ---
 

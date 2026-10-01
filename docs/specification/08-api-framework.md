@@ -19,6 +19,45 @@ The API layer supports explicit handlers and opt-in resource APIs, with allowlis
 APIs invoke [operations](22-application-operations-and-services.md), use [wire types](07-schemas-and-validation.md) and [Problem Details](06-http-and-routing.md). Idempotency belongs to the operation and survives adapter differences. Stale fingerprints fail preconditions; hashes never grant authority. Compatibility covers behavior/errors/types as well as routes.
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (H10, H6, M1, L2). Syntax is illustrative; claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment and retained sketches below.
+
+### Resources are generated operations
+
+A resource (the DRF `ViewSet` counterpart) generates up to five Tier 0 operations: list, retrieve, create, update, delete. Each is an ordinary [operation](22-application-operations-and-services.md) with:
+
+- **Policy.** A policy per action, or one policy for all; required (deny by default).
+- **Data access.** The scoped `Db`, so list/count/pagination are tenant- and policy-scoped.
+- **Schemas.** Derived schemas ([07](07-schemas-and-validation.md)): `output`, `input`, `patch`.
+- **Filtering and ordering.** Executed through the `DynamicModel` layer ([03](03-models-and-orm.md)) against declared `filter`/`ordering` allowlists only.
+- **Concurrency.** Optimistic concurrency through `#[version]` and ETag/`If-Match` on update and delete when the model declares a version.
+- **Pagination.** Page-number by default, cursor opt-in, with `Count` totals.
+- **Overrides.** Any action can be replaced by a named operation or disabled.
+
+Illustrative:
+
+```
+#[rjango::resource(
+    model = Venue,
+    output = VenueResponse,
+    input = CreateVenue,
+    patch = UpdateVenue,
+    policy = venues::can_manage_venue,
+    filter(active, name = icontains),
+    ordering(name, created_at),
+)]
+pub struct VenueResource;
+```
+
+### Idempotency belongs to the operation
+
+`#[idempotent]` with pluggable storage (below) is SUPERSEDED. Idempotency is declared on the operation, and its records live in the operation's database. A claim is written in the same transaction as the effects, so outcome and effects commit together. Other storage (such as Redis) is not supported for idempotency, because it cannot commit atomically with PostgreSQL.
+
+### Errors and deprecation
+
+The "API Error Contract" below is expressed as Problem Details types and codes ([24](24-developer-experience-and-diagnostics.md)). Deprecation uses `#[rjango::deprecated(since, remove, replacement)]`: the unqualified `#[deprecated(...)]` with `remove`/`replacement` keys collides with Rust's built-in attribute.
+
 ## Open decisions and interpretation
 
 Idempotency storage, versioning defaults, final resource syntax, SDK scope, and precise compatibility rules remain open.
@@ -224,6 +263,8 @@ allows no-op generation when nothing changed.
 <!-- Source: iii section 68. -->
 ## Idempotency
 
+> **SUPERSEDED (Candidate 2):** idempotency is declared on the operation and stored in the operation's database, not in pluggable storage.
+
 Rjango should provide first-class idempotency for mutation APIs.
 
 Example:
@@ -276,7 +317,7 @@ AMG associates routes/schemas with API version.
 <!-- Source: iii section 70. -->
 ## Deprecation
 
-Routes and fields can be marked:
+Routes and fields can be marked (Candidate 2: spelled `#[rjango::deprecated(...)]` to avoid colliding with Rust's built-in attribute):
 
 ```
 #[deprecated(

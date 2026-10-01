@@ -30,4 +30,15 @@ This ADR records an architectural agreement, not completed implementation or a p
 
 ## Candidate 1 clarification
 
-The [architecture review](../reviews/architecture-review-candidate-1.md) retains this foundational decision and records its strengthened boundaries. Observed AMG evidence remains a separate overlay; migrations use phase/step recovery and checksums; core MCP never exposes raw secrets and defaults to zero production application-data access. These amendments supersede conflicting earlier sketches, with validation still required.
+The [architecture review](../reviews/architecture-review-candidate-1.md) retains this decision and adds separate local and remote trust, no raw `secrets.read` capability, zero production data access by default, and fingerprint/idempotency preconditions.
+
+## Candidate 2 clarification
+
+From the [independent review](../reviews/independent-review-candidate-1.md):
+
+- Tool outputs carrying application data are labelled untrusted content.
+- Approvals are bound to action digests and delivered outside the agent conversation.
+- Test runs, scripts, data steps and shell execution form a CodeExecution capability class that is local-development only.
+- Development MCP is stdio or loopback-only and refuses data tools against databases not marked as development.
+
+See [MCP architecture](../ai/mcp-architecture.md).

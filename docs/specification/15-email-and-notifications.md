@@ -10,6 +10,28 @@ Email composition, provider transport, and durable delivery are separate concern
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (H8, M1, M11). This topic had no Candidate 1 amendment; this section reconciles it with the [outbox](23-durability-and-message-contracts.md). Claims remain VALIDATION REQUIRED.
+
+### Durable dispatch
+
+Email, notifications and webhooks are written as outbox intents in the originating transaction (`tx.dispatch(SendEmail { .. })`). The "commit transaction, then dispatch email job" sequence in "Email and Jobs" below is SUPERSEDED: a crash between commit and dispatch would lose the email. Provider calls carry a stable message ID as a provider idempotency key where supported. Otherwise a delivery log keyed by message ID suppresses duplicates within the documented window.
+
+### Egress-controlled outbound HTTP client (SSRF)
+
+All framework-initiated outbound HTTP to destinations that are not fixed configuration uses `rjango::http::Client` with an **egress policy**. Examples are webhooks to customer URLs, URL ingestion, and link previews.
+
+- **Schemes:** only `https` by default (`http` opt-in per destination class).
+- **Blocked by default:** loopback, private (RFC 1918 and RFC 4193), link-local (including cloud metadata such as 169.254.169.254), multicast, unspecified and carrier-grade NAT ranges, for IPv4 and IPv6 including mapped forms.
+- **Resolution checks:** the destination is checked **after DNS resolution and at connect time**, and the connection is pinned to the checked address to defeat DNS rebinding. Every redirect is re-checked; the redirect count is bounded.
+- **Bounds and logging:** bounded connect, response and body-size limits. Response bodies are not reflected to callers. Outbound requests are logged with destination and policy decision.
+- **Configured destinations:** fixed endpoints such as email providers and identity providers are allowlisted by name in configuration and bypass only the private-range rule they explicitly declare.
+
+### Webhooks
+
+Webhook payloads are signed with a per-endpoint secret over a timestamp plus body (illustrative: `Rjango-Signature: t=..., v1=...`). Receivers are documented to reject stale timestamps. Endpoint secrets are `Secret<T>` values stored encrypted at rest. Endpoints that fail continuously are disabled after a configured threshold, with audit. Webhook delivery runs as a job with at-least-once semantics, and payloads carry the envelope `message_id` for receiver deduplication.
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Notification channels, templating choices, and backend guarantees remain open.
@@ -117,6 +139,8 @@ Templates should be testable independently.
 
 <!-- Source: iv section 79. -->
 ## Email and Jobs
+
+> **SUPERSEDED (Candidate 2):** the email intent is written inside the transaction through the outbox, not dispatched after commit.
 
 Production email should normally be job-backed.
 

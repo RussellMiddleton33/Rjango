@@ -21,6 +21,14 @@ Realtime commands invoke shared operations. Negotiate supported protocol version
 Authorize connect, subscribe, publish/command and protected delivery. Revalidate credential expiry/refresh, logout, role/tenant/resource changes and delegation revocation. Bounded periodic rechecks cover missed invalidations; recheck queued protected messages and evict revoked subscriptions. Declare/validate maximum stale-authorization windows; sensitive streams use authoritative checks or fail closed if policy is unavailable. Topic names/prior authentication are insufficient. Bound per-subscriber bytes/count; slow-client policy drops ephemeral messages, requests resync or disconnects explicitly.
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (H8, C1). Claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment where they conflict.
+
+- **Origin validation (cross-site WebSocket hijacking).** Browsers attach cookies to cross-site WebSocket handshakes, and CSRF tokens and CORS do not protect them. Every cookie-authenticated **WebSocket** handshake requires an `Origin` header matching the configured trusted origins (same-origin by default). Browsers always send it on WebSocket handshakes, so a missing or mismatched origin is rejected before upgrade. For cookie-authenticated **SSE** (`EventSource` issues an ordinary GET, which omits `Origin` when same-origin), a missing `Origin` is accepted only when `Sec-Fetch-Site` is `same-origin` or `none`. A present `Origin` must match the trusted list, and anything else is rejected. Bearer-token connections, where the token is presented in the first message or a subprotocol and never in the URL, are exempt from Origin checks but not from authorization. Tokens in query strings are rejected by default because they leak into logs.
+- **Channels are operations.** Subscribing to a channel is a Query operation with a required policy (deny by default). Publishing commands are Command operations. Channel names derived from IDs (`venue:123`) are scoped by tenant from `Ctx` and are never authority in themselves.
+- **Revocation source.** Auth publishes invalidation events (logout, revocation, role or tenant change) that connected nodes consume ([09](09-authentication.md)). The periodic recheck interval bounds the stale-authorization window when an event is missed. The window is a PROPOSED default of 60 seconds for ordinary streams and 0 (authoritative check per message) for streams declared sensitive.
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Distributed broker choice, reconnect guarantees, authorization revalidation, and cross-node semantics need fuller design.
