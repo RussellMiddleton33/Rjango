@@ -1,5 +1,7 @@
 # Rjango 1.0 adversarial architecture review — Candidate 1
 
+> **Superseded as the latest review:** the [independent review of Candidate 1](independent-review-candidate-1.md) produced Review Candidate 2. Its amendments take precedence where they conflict with this disposition.
+
 **Date:** 2026-09-30. **Verdict:** VIABLE, AMENDMENTS INCORPORATED AT SPEC LEVEL; VALIDATION REQUIRED. **Master status:** REVIEW CANDIDATE 1, not frozen. **Implementation planning/coding:** not authorized by this review.
 
 ## Source and authority

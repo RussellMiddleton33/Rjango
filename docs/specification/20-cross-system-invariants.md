@@ -19,6 +19,82 @@ Subsystems share metadata, identity, configuration, errors, observability, audit
 All six surfaces share operation rules; transport exposure grants no business authority. AMG exposes provenance/completeness/projection identity. Rows, descriptors and loaded values are distinct. Stable migration IR/checksums/single-migrator/step recovery are required. Database plus durable intent commit in one database; delivery is at least once. Identity/delegation, tenant/query scopes, wire types, cancellation and resource bounds span every subsystem. Core MCP never returns raw secrets; production has zero-data-access defaults. See [review disposition](../reviews/architecture-review-candidate-1.md).
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (C1, C2, H1, H9, M10). Syntax is illustrative; claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment and retained sketches below.
+
+### Candidate 2 shared invariants
+
+1. **Every entry point is an operation.** Plain handlers are implicit operations with documented defaults ([22](22-application-operations-and-services.md)).
+2. **Deny by default.** Every exposed surface declares a policy or `public` ([10](10-authorization-and-security.md)).
+3. **Scoped by default.** The default database handle applies tenant and policy scopes; unscoped access is a declared, audited capability ([03](03-models-and-orm.md)).
+4. **Transactions own their connection.** Access is exclusive, commit consumes the transaction, drop rolls back, and an unknown outcome is a typed error.
+5. **Durable effects go through the transaction.** `tx.emit` and `tx.dispatch`; never after-commit callbacks for durable work ([23](23-durability-and-message-contracts.md)).
+6. **Loaded relations are explicit values.** `Loaded<M>` with runtime-checked accessors; rows never contain relation fields.
+7. **Commands run to completion or deadline.** Queries cancel on disconnect ([01](01-runtime-architecture.md)).
+8. **Diagnostics are API.** Compile-time versus startup checks are classified honestly ([24](24-developer-experience-and-diagnostics.md)).
+9. **Production is the fail-safe environment.** Development settings never flow into it ([18](18-configuration.md)).
+10. **Schema changes are rolling-deploy aware.** Expand/contract tags and readiness gating ([04](04-migrations.md)).
+
+### Conforming programming model
+
+The "Rjango's Emerging Programming Model" example below is SUPERSEDED. It used no operation, an unscoped create, after-commit naming, non-transactional job dispatch and unused extractors. The conforming shapes are below (illustrative syntax).
+
+**Tier 0: six concepts** (model, schema, handler, policy, `Result`/`?`, `.await`):
+
+```
+#[rjango::model(tenant = organization_id)]
+pub struct Venue {
+    #[primary_key]
+    #[default = uuid_v7]
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    #[unique]
+    pub slug: String,
+    #[max_length = 200]
+    pub name: String,
+    #[version]
+    pub version: i64,
+}
+
+#[rjango::schema(from = Venue, input, fields(slug, name))]
+pub struct CreateVenue;
+
+#[rjango::schema(from = Venue, output, fields(id, slug, name))]
+pub struct VenueResponse;
+
+#[rjango::policy]                                    // context-only policy: no object exists yet
+async fn can_create_venue(ctx: &Ctx) -> Decision { /* e.g. member role in ctx's tenant */ }
+
+#[rjango::post("/venues", policy = can_create_venue)]
+async fn create_venue(ctx: Ctx, Json(input): Json<CreateVenue>) -> rjango::Result<VenueResponse> {
+    let venue = Venue::objects(&ctx.db()).create(input.into()).await?;   // scoped; tenant key from ctx
+    Ok(VenueResponse::from(&venue))
+}
+```
+
+`NewVenue` omits the tenant key, the defaulted primary key and the `#[version]` field ([03](03-models-and-orm.md)), so `CreateVenue` converts into it. The scoped handle fills the tenant from `Ctx`, so a client cannot choose a tenant. The handler is an implicit Command operation: its policy is required, it is shielded from disconnect, it reports Problem Details errors, and its effect (writes `venues.Venue`) is generated into the AMG. A single `create` runs in its own implicit statement transaction.
+
+**Tier 1: adds a transaction, a durable event and a listener:**
+
+```
+#[rjango::post("/venues", policy = can_create_venue)]
+async fn create_venue(ctx: Ctx, Json(input): Json<CreateVenue>) -> rjango::Result<VenueResponse> {
+    let mut tx = ctx.db().begin().await?;                        // scoped to ctx's tenant
+    let venue = Venue::objects(&mut tx).create(input.into()).await?;
+    tx.emit(VenueCreated { venue_id: venue.id }).await?;         // outbox intent, same commit
+    tx.commit().await?;                                          // consumes tx; unknown outcome is typed
+    Ok(VenueResponse::from(&venue))
+}
+
+#[rjango::listener]                                              // durable: a job per (event, listener)
+async fn reindex_venue(ctx: JobCtx, event: VenueCreated) -> rjango::Result<()> {
+    search::reindex_venue(&ctx, event.venue_id).await
+}
+```
+
+The transaction is explicit because the commit outcome is part of the contract. `db.atomic(async |tx| ...)` is the equivalent convenience form.
+
 ## Open decisions and interpretation
 
 The first cross-system review is incorporated in Candidate 1. Independent review and reconciliation with remaining design areas remain outstanding; no implementation planning is authorized.
@@ -487,6 +563,8 @@ This is a major Rust-friendly improvement over some dynamic framework patterns.
 
 <!-- Source: iv section 154. -->
 ## Rjango's Emerging Programming Model
+
+> **SUPERSEDED (Candidate 2):** see "Conforming programming model" in the amendment above. This sketch is retained for history only.
 
 A typical request might eventually look conceptually like:
 

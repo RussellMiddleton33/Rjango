@@ -1,8 +1,16 @@
 # Rjango master specification
 
-**Master status: REVIEW CANDIDATE 1 — NOT FROZEN.** Latest review corrections are incorporated at specification level; implementation planning and coding remain unauthorized.
+**Master status: REVIEW CANDIDATE 2 — NOT FROZEN.** Independent-review corrections are incorporated as architectural direction; implementation planning and coding remain unauthorized.
 
-Read the [architecture review and amendment crosswalk](../reviews/architecture-review-candidate-1.md), [Application Operations / Services](22-application-operations-and-services.md), and [core durability/message contracts](23-durability-and-message-contracts.md). Topic sections titled “Review Candidate 1 amendment” take precedence over conflicting retained sketches. The first conceptual cross-system review is complete; independent review, remaining design work and experimental validation remain open.
+Read the [independent review and disposition crosswalk](../reviews/independent-review-candidate-1.md), then the [first architecture review](../reviews/architecture-review-candidate-1.md), [Application Operations / Services](22-application-operations-and-services.md), [core durability/message contracts](23-durability-and-message-contracts.md) and [developer experience and diagnostics](24-developer-experience-and-diagnostics.md).
+
+**Precedence:**
+
+1. Sections titled "Review Candidate 2 amendment".
+2. Sections titled "Review Candidate 1 amendment".
+3. Retained sketches, many now carrying inline SUPERSEDED notes.
+
+The conforming everyday programming model is in [20](20-cross-system-invariants.md). An independent review has been completed and incorporated; remaining design work and experimental validation remain open.
 
 Rjango is an async-first, type-safe Rust web framework design combining Django-style productivity with modern APIs, explicit security boundaries and structured tooling for humans and agents. It is **AI-native but never AI-dependent**.
 
@@ -12,7 +20,8 @@ This is the durable source of truth for the architecture designed so far. It pre
 
 | Status | Meaning |
 | --- | --- |
-| **REVIEW CANDIDATE 1** | Document-set maturity: amendments integrated for independent review; neither frozen nor experimentally validated. |
+| **REVIEW CANDIDATE 1** | Document-set maturity: first-review amendments integrated for independent review; neither frozen nor experimentally validated. |
+| **REVIEW CANDIDATE 2** | Document-set maturity: independent-review direction integrated; neither frozen nor experimentally validated. |
 | **PROPOSED** | Candidate design, illustrative syntax, alternative or unresolved question. |
 | **SPEC-LOCKED** | Agreed architectural direction or requirement; changing it requires an explicit recorded decision. It need not be implemented or experimentally proven. |
 | **VALIDATION REQUIRED** | The claim needs supporting prototype, test, benchmark, compatibility or operational evidence. May accompany SPEC-LOCKED. |
@@ -50,11 +59,12 @@ The settled principles below are SPEC-LOCKED; examples and explicitly open decis
 | [20 · Cross-system invariants](20-cross-system-invariants.md) | Shared requirements; validation remains outstanding. |
 | [21 · Remaining design inventory](21-design-backlog.md) | Outstanding design areas; no execution sequence. |
 | [22 · Application Operations / Services](22-application-operations-and-services.md) | Shared business boundary for HTTP, Admin, Realtime, CLI, Jobs and MCP; ergonomics/evidence open. |
-| [23 · Durability and message contracts](23-durability-and-message-contracts.md) | Core outbox, versioned envelopes, at-least-once delivery and recovery; backend choices/evidence open. |
+| [23 · Durability and message contracts](23-durability-and-message-contracts.md) | Core outbox, versioned envelopes, at-least-once delivery and recovery. PostgreSQL queue-as-outbox is the default; broker choices and evidence remain open. |
+| [24 · Developer experience and diagnostics](24-developer-experience-and-diagnostics.md) | Teaching Rust through the framework, diagnostics contract, error model, dev loop budgets, introspection mode, shell replacement and version skew. Budgets are PROPOSED; evidence is open. |
 
 ## Supporting documentation
 
-- [Architecture decision records](../adr/README.md): nine major settled decisions with rationale, boundaries and evidence gaps.
+- [Architecture decision records](../adr/README.md): fifteen major settled decisions with rationale, boundaries and evidence gaps.
 - [Coming from Django](../django/README.md): models, queries, migrations, apps, admin, application services, web and security.
 - [AI and agent documentation](../ai/README.md): agent guide and MCP architecture/security scaffolding.
 - [Preservation record and section crosswalk](preservation.md): every source section accounted for, with explicit supersessions.
@@ -62,7 +72,21 @@ The settled principles below are SPEC-LOCKED; examples and explicitly open decis
 
 ## Cross-system decisions to preserve
 
-Tokio is the multi-thread async runtime; Axum/Tower supplies HTTP and middleware. PostgreSQL is first, with SeaORM 2.x over SQLx 0.9 as the selected design and a direct SQLx escape hatch. Database context is explicit. The AMG is immutable and deterministic, separate from runtime bindings and operational data. Production migrations are explicit. No property access hides network I/O. AI operation is optional and MCP permissions are separated from metadata visibility.
+Tokio is the multi-thread async runtime; Axum/Tower supplies HTTP and middleware. PostgreSQL is first, with SeaORM as the ORM engine over SQLx (2.x/0.9 is a version target, not a lock) and a direct SQLx escape hatch.
+
+Candidate 2 adds the following decisions:
+
+- every entry point is an operation, with a progressive Tier 0/1/2 contract;
+- deny-by-default policy, with scoped data access as the default;
+- transactions own their connection, and commit consumes;
+- durable effects go through the transaction;
+- loaded relations are `Loaded<M>` values;
+- commands are shielded from client disconnect;
+- an unset environment means production;
+- migrations carry expand/contract tags and gate readiness;
+- diagnostics are API.
+
+Database context is explicit. The AMG is immutable and deterministic, separate from runtime bindings and operational data. Production migrations are explicit. No property access hides network I/O. AI operation is optional and MCP permissions are separated from metadata visibility.
 
 Jobs use at-least-once delivery with idempotency and transaction-aware dispatch. Domain events, durable jobs and ephemeral realtime messages have distinct contracts. Admin and public APIs require explicit exposure. Human docs, agent docs and meaningful tests are first-class feature requirements.
 

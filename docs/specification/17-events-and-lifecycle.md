@@ -19,6 +19,16 @@ Domain facts, durable jobs, ephemeral realtime messages, and framework lifecycle
 Durable events use the [outbox/envelope contract](23-durability-and-message-contracts.md); local listeners are explicitly non-durable. Durable listeners bridge database outcomes to subsequent durable effects through their own outbox or a documented backend guarantee. Replays preserve identity/version/idempotency semantics. Lifecycle hooks are tracked, cancellation-classified and subject to the [total shutdown budget](01-runtime-architecture.md).
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (M9, H5, C2). Claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment where they conflict.
+
+- **Emission.** Durable domain events are emitted with `tx.emit(event)` ([22](22-application-operations-and-services.md)). In-process events use a visibly different, explicitly non-durable API, labelled in metadata.
+- **Listener defaults.** Listeners are durable by default: each listener is a job keyed by (event message ID, listener ID) ([23](23-durability-and-message-contracts.md)), with retries independent of the producer. Synchronous in-process listeners are a Tier 2 opt-in, run inside the producer's transaction, receive the transaction explicitly, and fail the operation on error.
+- **Model hooks** are synchronous, receive only the row, and cannot use framework I/O ([03](03-models-and-orm.md)). They run for single-row saves, not for `bulk_update`/`bulk_delete`.
+- **Startup readiness.** The startup/Ready phase includes the migration compatibility-window check ([04](04-migrations.md)). An instance outside the window is alive but not ready. Startup hooks never apply migrations.
+- **Cycles.** Durable listener cycles are detected statically from declared emits/listens edges in the AMG and reported by `rjango check`. A runtime causation-depth limit (PROPOSED 16) quarantines runaway chains.
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Listener execution/failure defaults, cycle safeguards, and exact lifecycle signatures remain open.

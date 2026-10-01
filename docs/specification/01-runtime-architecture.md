@@ -25,6 +25,35 @@ Shutdown marks readiness false, stops ingress and worker intake, drains tracked 
 HTTP bodies/connections, database pools, blocking executors, workers, outbox relays, realtime subscribers, MCP requests and telemetry exporters declare concurrency, queue-count/byte, payload and time limits, including tenant/identity quotas where needed. Admit before expensive allocation. Saturation selects bounded wait, rejection/retry-after, ephemeral drop or disconnect explicitly. Durable intent is never silently dropped: storage exhaustion rejects admission or fails its transaction. Avoid waiting on nested limits while holding scarce database connections. Expose saturation, queue age and rejection metrics with bounded cardinality. Global quotas and numeric defaults require validation.
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (H2, M11). Numeric values are PROPOSED; claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment where they conflict.
+
+### Who assigns cancellation classes, and the defaults
+
+The operation descriptor carries the cancellation class ([22](22-application-operations-and-services.md)); macros assign defaults and developers override at Tier 2.
+
+- **Query operations** are CancellationSafe: when the caller disconnects or the deadline passes, the future is dropped.
+- **Command operations** are shielded from the connection. The adapter runs the command in a framework-tracked task that continues if the client disconnects, until it completes or reaches its operation deadline. Its result is recorded (and stored for idempotent commands) even if nobody receives it.
+  - Deadline expiry before commit rolls back and reports a timeout.
+  - Expiry during commit yields `CommitOutcomeUnknown`.
+  - Shielded tasks are counted in the shutdown drain budget, have a per-instance concurrency bound, and never outlive the process. They are not durable work; durable continuation uses the outbox and jobs.
+- **NonInterruptiblePhase** regions (commit, migration DDL steps) are bounded by their own timeouts and recovered through the ledger or idempotency state.
+
+This replaces the HTTP-section implication ([06](06-http-and-routing.md)) that every handler future is cancelled when the client disconnects. Django's synchronous views ran to completion; Rjango keeps that expectation for writes and drops it for reads.
+
+### Blocking work and password hashing
+
+Memory-hard password hashing, template rendering of large documents, image work and synchronous libraries run on the bounded blocking executor. Admission is bounded, so a login flood queues or rejects instead of starving runtime threads ([09](09-authentication.md)). Development mode reports runtime-thread stalls above a configurable threshold (PROPOSED 50 ms) with the span that blocked.
+
+### Application state
+
+Framework resources (pools, clients, configuration, AMG) are shared through owned, cheaply clonable handles. Application state is registered with `.state(T)` (`T: Send + Sync + 'static`) and extracted with `State<T>`. Mutable shared state uses explicit `Arc<Mutex<_>>`/`RwLock`, atomics, or framework primitives (rate-limit counters, request-local caches), taught as a Rust concept ([24](24-developer-experience-and-diagnostics.md)). The principle "without forcing developers to deal with `Arc` or locks" (in [00](00-vision-and-principles.md)) applies to framework-managed resources only.
+
+### Validation required
+
+Disconnect behaviour of Hyper/Axum on HTTP/1.1 and HTTP/2; the cost and bounds of shielded commands; stall detector overhead; blocking-pool sizing under login floods.
+
 ## Open decisions and interpretation
 
 Public blocking-helper syntax, detailed cancellation budgets, runtime tuning, and the full operational/performance contract require further design or validation.

@@ -26,4 +26,8 @@ Global or implicitly discovered context, including early `User::objects()` examp
 
 Transaction context reuse, savepoints, rollback after cancellation and pool reuse need real integration evidence.
 
+## Candidate 2 refinement
+
+Explicit context is retained and refined. The default handle is **scoped** to actor and tenant ([ADR 0012](0012-scoped-data-access-and-default-deny.md)), and transactions are owning guards with exclusive access and a consuming commit ([ADR 0013](0013-transaction-ownership.md)). Explicit does not mean unscoped.
+
 This ADR records an architectural agreement, not completed implementation or a passing validation result. A future revision should link evidence or a superseding ADR rather than silently rewriting the decision history.

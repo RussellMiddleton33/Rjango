@@ -23,6 +23,126 @@ Persisted model values represent row state, including stored foreign-key IDs. Re
 Transactions/outboxes bind to one database. Rjango makes **no cross-database ACID guarantee**, including separately opened transactions. Cross-database workflows declare eventual consistency, compensation and reconciliation boundaries. Replica reads are eventual unless an explicitly supported consistency mechanism is selected. Authorization and mutation prerequisites use primary reads by default. Read-your-writes requires primary pinning or a verified replication-position barrier with deadline/primary fallback; fixed sleeps prove nothing. Routing preserves tenant and transaction affinity. Lag/failover/barrier support remain validation-required.
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (C1, H1, H3, H6, H9, M1, M7, M9, L3, L4). Syntax is illustrative; semantics below are architectural. Claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment and retained sketches below.
+
+### Database handles
+
+| Handle | Obtained from | Semantics |
+| --- | --- | --- |
+| `Db` (scoped) | `ctx.db()` or the `Db` extractor | Cheap clone (an `Arc` internally). Applies registered tenant/policy scopes ([10](10-authorization-and-security.md)). The default everywhere. |
+| `SystemDb` (unscoped) | `ctx.system_db(reason)`; migration and maintenance contexts | Declared, audited capability. Never the default. |
+| `Transaction` | `db.begin().await?` or `db.atomic(...)` | Owns one connection. Inherits the scope of the handle it came from. Exclusive access. |
+
+Query entry points accept any of these (illustrative: `Venue::objects(&db)`, `Venue::objects(&mut tx)`). The section "Do not bake multi-tenancy deeply into initial ORM" below is SUPERSEDED for shared-database tenancy: a tenant key and automatic scoping are core. Schema-per-tenant and database-per-tenant remain future options routed through the same handle types. For tenant-owned models, `NewVenue` omits the tenant key and the scoped handle fills it from `Ctx`; setting a different tenant requires `SystemDb`. More generally, `NewVenue` omits:
+
+- the tenant key;
+- `#[version]` fields (initialized by the framework);
+- `auto_now`/`auto_now_add` fields;
+- primary keys with a declared generator (`#[default = uuid_v7]`, identity).
+
+It includes every other non-defaulted field. Fields with other declared defaults are `Option<T>` in `NewVenue`.
+
+### Transaction ownership ([ADR 0013](../adr/0013-transaction-ownership.md))
+
+- **Primitive:** `let mut tx = db.begin().await?;` returns a `Transaction` that owns its connection. Queries borrow it exclusively (`&mut tx`), so two concurrent queries or a query during an open stream on the same transaction are **compile errors**. A PostgreSQL connection does one thing at a time, and the type system says so.
+- **Commit:** `tx.commit().await` consumes the transaction (`fn commit(self)`). Use after commit is a compile error. It returns `Result<Committed, CommitError>`, where `CommitError::OutcomeUnknown` is distinct from a definite failure and feeds operation reconciliation ([22](22-application-operations-and-services.md)). `From<CommitError> for rjango::Error` maps `OutcomeUnknown` to `rjango::Error::CommitOutcomeUnknown`, so `tx.commit().await?` in a handler preserves the distinction.
+- **Rollback:** dropping an uncommitted transaction (early `?` return, cancellation, panic unwinding) rolls back. `tx.rollback().await` is explicit and observable.
+- **Convenience:** `db.atomic(async |tx| { ... }).await` commits on `Ok`, rolls back on `Err` or panic, and surfaces unknown commit outcomes as `rjango::Error::CommitOutcomeUnknown`. The closure's error type is fixed to `rjango::Error`, with `From` conversions for declared domain errors, so `?` and `Ok(x)` infer without annotations. It requires Rust 2024 async closures, which sets the MSRV to at least 1.85 ([24](24-developer-experience-and-diagnostics.md)).
+- **Savepoints:** `tx.savepoint().await?` returns a nested guard with the same commit/drop semantics, mapped to `SAVEPOINT` / `RELEASE` / `ROLLBACK TO`.
+- **Outer-handle mistake:** while a task holds an open transaction, using a pool-backed `Db`/`SystemDb` on the same task triggers diagnostic `RJG-DB-TX-OUTSIDE`. It is a warning in development and an error in tests. Production records a metric. This targets the Django `atomic()` habit, where every query is implicitly inside the transaction.
+- **Effects:** `tx.emit(event)`, `tx.dispatch(job)` and `tx.after_commit(f)` are defined in [22](22-application-operations-and-services.md).
+
+### Loaded relations ([ADR 0014](../adr/0014-loaded-relations.md))
+
+Model structs contain row state only. `.with(...)` changes a QuerySet's item type from `M` to `Loaded<M>`. `Loaded<M>` dereferences read-only to the row and carries the loaded relations. The model macro generates accessors that are checked at runtime:
+
+| Relation | Accessor result |
+| --- | --- |
+| has-many / many-to-many | `Result<&[Loaded<T>], NotLoaded>` (empty slice means LoadedEmpty) |
+| belongs-to / has-one, non-null | `Result<&Loaded<T>, NotLoaded>` |
+| nullable belongs-to / has-one | `Result<Option<&Loaded<T>>, NotLoaded>` (`None` means LoadedNull) |
+
+The type is the same whichever relations were loaded, so there is no type-state: nested `.with` never appears in user-visible types or compiler errors. A `NotLoaded` error names the exact `.with(Venue::R.floors)` to add and links to N+1 diagnostics. Developers who need compile-time proof of loaded data use typed projections (`select_as::<VenueWithFloors>()`). `venue.load(Venue::R.floors, &db)` (or `&mut tx`) returns a new `Loaded<Venue>` rather than mutating the row. Relation-field declarations such as `pub floors: HasMany<Floor>` below are SUPERSEDED; relations are declared in a model-level `relations(...)` block or on the foreign-key field (illustrative: `#[belongs_to(Venue, on_delete = Cascade)] pub venue_id: Uuid`).
+
+The loader strategy (JOIN, batched `IN` query, or windowed loader) is chosen deterministically from relation cardinality, is reported by `.explain()` and query instrumentation, and is VALIDATION REQUIRED against SeaORM's capabilities. "The framework chooses" is a goal, not a proven claim.
+
+### Generated public surface (M7)
+
+Each model generates only the following user-visible items, all rustdoc-visible with "generated by `#[rjango::model]`" documentation:
+
+- the row struct `Venue`
+- `NewVenue`
+- `VenuePatch`
+- `Venue::F` (fields)
+- `Venue::R` (relations)
+- `Loaded<Venue>` accessors
+
+Editors, query internals, descriptors and the SeaORM entity are `#[doc(hidden)]` implementation details reached through the facade's `__private` module. `Change<T>` below is SUPERSEDED by the single tri-state type `Patch<T>` (`Absent`, `Null`, `Value(T)`) shared with [schemas](07-schemas-and-validation.md); `VenueChanges` is renamed `VenuePatch`. Non-nullable fields in `VenuePatch` use `Option<T>` (absent/value); `Patch::Null` is only offered for nullable columns, so setting NULL on a non-null column is a compile error.
+
+### QuerySet terminal semantics (L3) and identity (L4)
+
+- `first()`/`last()` → `Option<M>`; an unordered QuerySet orders by primary key, as Django does.
+- `require()` → exactly one row, else `NotFound` or `MultipleRows`; `one()` is removed as redundant.
+- `get(pk)` → `NotFound` if absent; `find(pk)` → `Option`.
+- `exists()`, `count()` respect scopes.
+
+Every model declares a primary key (composite allowed by explicit declaration); a missing primary key is an error, not the warning listed in [02](02-application-metadata-graph.md).
+
+References below to "v0.1" or "initial implementation" scope are historical scoping language and create no release commitment. Release scope remains open in [21](21-design-backlog.md).
+
+### Optimistic concurrency is core (M1)
+
+`#[version]` fields (section "Optimistic Locking" below, formerly "later") are a core feature. Admin DirectCRUD, resource updates, MCP mutations and any operation declaring a concurrency precondition use `WHERE version = ?` and surface `ConcurrentModification` as a Problem Details conflict. Row ETags for HTTP are derived from the version.
+
+### Hooks and bulk operations (M9)
+
+Model hooks are **synchronous** and receive only the row being written: no context, handle or client. They therefore cannot use framework I/O (database, cache, storage, jobs, email). The compiler does not stop a hook from calling blocking foreign I/O such as `std::net` or a blocking HTTP client; that is a documented anti-pattern caught by the development stall detector ([01](01-runtime-architecture.md)), not a compile-time guarantee. Hooks are limited to normalization and local invariants. Cross-component effects use `tx.emit`.
+
+QuerySet `update`/`delete` are renamed `bulk_update`/`bulk_delete` to make their semantics visible. They:
+
+- apply scopes;
+- apply `auto_now` and increment `#[version]`;
+- validate patch value constraints;
+- write one audit record (filter description, affected count, actor);
+- run **no** per-row hooks or events.
+
+An unfiltered bulk call requires `.all_rows()`. Per-row semantics require iterating and saving, or a named operation.
+
+### Dynamic model access (H6)
+
+The model macro also generates a type-erased `DynamicModel` implementation used by Admin, resource filters/ordering, MCP approved queries and tooling:
+
+- field accessors limited to declared fields;
+- a typed `Value` enum;
+- a filter/order builder accepting only field IDs allowlisted by the caller's exposure configuration;
+- create/patch from validated dynamic input.
+
+Scope, field visibility, field editability and sensitivity are enforced **inside** this layer using the same policies as typed access; callers cannot bypass them. Historical migration code uses a separate IR-typed dynamic row API ([04](04-migrations.md)), never current model types.
+
+### Compile-time versus startup diagnostics (H3)
+
+Single-type checks run in the macro and fail compilation with spans on the offending attribute:
+
+- invalid default type;
+- `auto_now` on an incompatible field;
+- unsupported field type via `#[diagnostic::on_unimplemented]` on `DatabaseValue`;
+- duplicate attributes;
+- multiple primary keys without a composite declaration.
+
+Cross-model checks are **AMG validation errors** reported at startup and by `rjango check` with source spans, not compile errors as listed below:
+
+- unknown relation target or field;
+- nullable relation backed by a non-null foreign key;
+- incompatible foreign-key types.
+
+Where a cross-type trait assertion is cheap and its error is readable, it may additionally run at compile time.
+
+### Validation required
+
+Shared-transaction interoperability between SeaORM 2 and SQLx 0.9 for raw SQL inside ORM transactions; `&mut` transaction ergonomics in handlers; `Loaded<M>` accessor cost and error quality; deterministic loader strategy; dynamic-layer performance for Admin lists; `RJG-DB-TX-OUTSIDE` detection accuracy.
+
 ## Open decisions and interpretation
 
 The final locks and open decisions are preserved below. In particular, model macro form, `F`/`R` syntax, creation/builders, partial selections, loaded-state representation, and backend wrapping require evidence before syntax is frozen.
@@ -195,6 +315,8 @@ User::objects(&db)
 ```
 
 Typical handler:
+
+> **Candidate 2 note:** this handler is an implicit operation with a scoped `Db`; returning the `Venue` model directly is SUPERSEDED. Return a derived output schema ([07](07-schemas-and-validation.md)).
 
 ```
 #[get("/venues")]
@@ -685,6 +807,8 @@ Only changed columns should be updated.
 <!-- Source: orm section 18. -->
 ## Explicit Changesets
 
+> **SUPERSEDED (Candidate 2):** `Change<T>` and `VenueChanges` become the shared `Patch<T>` and `VenuePatch`; see the amendment above.
+
 Bulk/API updates need another abstraction.
 
 Generated:
@@ -731,6 +855,8 @@ This avoids subtle PATCH bugs.
 
 <!-- Source: orm section 19. -->
 ## Bulk Update
+
+> **Candidate 2 note:** named `bulk_update` (and `bulk_delete` below), with the scope/audit/version semantics defined in the amendment above.
 
 ```
 Venue::objects(&db)
@@ -784,6 +910,8 @@ Bulk DELETE issued without restrictive filter.
 
 <!-- Source: orm section 21. -->
 ## Relationships
+
+> **SUPERSEDED (Candidates 1 and 2):** relation fields such as `pub venue: BelongsTo<Venue>` and `pub floors: HasMany<Floor>` are not stored row fields. Relations are declared on foreign keys or in a `relations(...)` block, and loaded values are read through `Loaded<M>` accessors.
 
 Example:
 
@@ -844,6 +972,8 @@ and explicit graph edges.
 
 <!-- Source: orm section 23. -->
 ## Loading Relationships
+
+> **Candidate 2 note:** `.with(...)` makes the item type `Loaded<Venue>`; read loaded data with `venue.floors()?` (a runtime-checked `Result`).
 
 Canonical Rjango syntax:
 
@@ -994,6 +1124,8 @@ This could become a major framework advantage.
 
 <!-- Source: orm section 27. -->
 ## Transactions
+
+> **Candidate 2 note:** the closure below is the `db.atomic(async |tx| ...)` convenience over the owning `Transaction` guard, with exclusive `&mut tx` access, a consuming `commit`, and a typed unknown outcome. Inside it, the outer `db` must not be used.
 
 First-class transactions:
 
@@ -1562,6 +1694,8 @@ Venue::objects(&db)
 <!-- Source: orm section 63. -->
 ## Model Hooks
 
+> **Candidate 2 note:** hooks are synchronous and receive only the row, so they cannot use framework I/O. See the amendment above for limits.
+
 Be conservative.
 
 Potential hooks:
@@ -1631,6 +1765,8 @@ This should be an extension, not core v0.1.
 <!-- Source: orm section 66. -->
 ## Multi-Tenancy
 
+> **SUPERSEDED (Candidate 2) for shared-database tenancy:** tenant keys and automatic scoping are core ([10](10-authorization-and-security.md)).
+
 Do not bake multi-tenancy deeply into initial ORM.
 
 But the explicit DB/query context should make future options possible:
@@ -1647,6 +1783,8 @@ This is another reason to avoid hidden global connection state.
 
 <!-- Source: orm section 67. -->
 ## Optimistic Locking
+
+> **Candidate 2 note:** core, not "later".
 
 Potential model feature:
 
@@ -1749,6 +1887,8 @@ We should not require developers to wait on Rjango whenever PostgreSQL adds or a
 
 <!-- Source: orm section 71. -->
 ## Compile-Time Diagnostics
+
+> **Candidate 2 note:** cross-model items in this list (unknown relation field, nullable relation versus non-null foreign key) are AMG startup/`rjango check` errors, not compile errors.
 
 These should fail compilation cleanly:
 

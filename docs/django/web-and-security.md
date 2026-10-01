@@ -40,3 +40,15 @@ INSTALLED_APPS
 Every page must explain:
 
 > where the analogy stops.
+
+## Candidate 2 differences
+
+- **Deny by default.** Every handler, resource, admin registration, channel and MCP tool declares a policy or `public`. Django views are open unless decorated.
+- **Permission classes become operation policies** with `scope` (list filtering) and `check` (object) forms. They receive `ctx`, not `request`.
+- **`DRF Serializer` becomes a derived schema** (`#[rjango::schema(from = Model, output, fields(...))]`) with explicit, compile-checked field lists.
+- **`DRF ViewSet` becomes a Resource** generating scoped operations.
+- **WebSockets.** Cookie-authenticated WebSocket/SSE handshakes require a trusted `Origin`. Django Channels leaves this to `AllowedHostsOriginValidator`; Rjango enforces it.
+- **Settings.** An unset environment means production. Security-sensitive settings in the base `rjango.toml` apply only to development and test.
+- **Passwords.** Django password hashes can be imported and are rehashed on login.
+
+See [Everyday workflow](everyday-workflow.md).

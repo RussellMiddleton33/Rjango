@@ -30,3 +30,10 @@ admin actions
 Major Rjango difference:
 
 > Admin permissions, AMG metadata and audit trails are designed together instead of being loosely connected systems.
+
+## Candidate 2 differences
+
+- **Scoping is enforced.** Admin lists are scoped by tenant and policy before querying. Django admin shows every row unless `get_queryset` is overridden.
+- **Explicit editability.** Fields are editable only when listed, and enforcement happens server-side in the dynamic model layer.
+- **Concurrency.** Edits use the model's `#[version]` field; without one, registration must declare `last_write_wins`.
+- **Actions are policy-protected operations.**

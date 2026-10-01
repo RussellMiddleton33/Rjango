@@ -19,6 +19,26 @@ Durable jobs use at-least-once delivery, idempotency, observable retries, and tr
 Transaction-coupled dispatch uses the [core outbox](23-durability-and-message-contracts.md); after-commit callbacks alone cannot survive process death reliably. Jobs/events use versioned envelopes. Consumers declare supported payload versions/upgrades and rolling-deployment windows. Unknown versions quarantine/dead-letter with diagnostics. Leases/retries/cancellation preserve at-least-once semantics; acknowledge after durable outcome. Delivery deduplication differs from business idempotency.
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (M10, C2). Syntax is illustrative; claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment and retained sketches below.
+
+- **Dispatch through the transaction.** The primary dispatch API is a method on the transaction: `tx.dispatch(SendWelcomeEmail { user_id })`. It writes the job intent in the same commit, which is the counterpart of Django's `transaction.on_commit(lambda: task.delay())` but durable. Non-transactional dispatch outside any transaction is a separately named call (illustrative: `jobs.dispatch_now(...)`) and is labelled non-transactional in metadata. The sketches `send_welcome_email::dispatch(&jobs, ...)` below and in [20](20-cross-system-invariants.md) are SUPERSEDED.
+- **Default backend: the PostgreSQL queue is the outbox.** The 1.0 default backend is a PostgreSQL job table in the application database. A transactional dispatch inserts the job row directly, so no relay is needed. Workers claim rows with `FOR UPDATE SKIP LOCKED`, leases and heartbeats. External brokers (Redis, SQS and similar) are optional backends fed by the [outbox relay](23-durability-and-message-contracts.md). Throughput limits of the PostgreSQL default are VALIDATION REQUIRED and documented.
+- **Job signature.** A job is an operation invoked by the Jobs adapter (illustrative: `#[rjango::job] async fn send_welcome_email(ctx: JobCtx, input: SendWelcomeEmail) -> rjango::Result<()>`). `JobCtx` provides:
+  - the worker's service identity as the **audit actor**;
+  - the originating actor, subject and tenant from the envelope as **origin**;
+  - a scoped `Db` whose tenant is the origin tenant and whose policy scopes are evaluated for the **origin subject**, attenuated by the job's declared capabilities, so a job never sees more than its originator could;
+  - attempt number, deadline and cancellation;
+  - the stable message ID for idempotency.
+
+  System jobs with no origin subject (maintenance, schedules) use `SystemDb` by declaration.
+
+  Jobs declare whether they revalidate origin authority at execution time; the default is yes for jobs with tenant data.
+- **Errors.** Retry classification uses the error model ([24](24-developer-experience-and-diagnostics.md)): domain and validation errors are non-retryable, transport and timeout errors are retryable, and `CommitOutcomeUnknown` reconciles before retrying.
+- **Schedules.** Recurring schedules fire exactly one job per (schedule, fire time). A unique key on that pair in the job table dedupes fires across multiple schedulers, so no leader election is required for correctness.
+- **Testing.** The test harness runs dispatched jobs inline after the test transaction commits, or captures them, as configured. "Execute immediately" never runs a job before its originating transaction commits.
+
 ## Open decisions and interpretation
 
 See the retained lock/open list. Backend defaults, scheduling leadership, payload evolution and exact APIs require validation and fuller design.
@@ -135,6 +155,8 @@ should be able to avoid sending the same invoice twice if a worker crashes after
 
 <!-- Source: iv section 28. -->
 ## Dispatch
+
+> **SUPERSEDED (Candidate 2):** the primary API is `tx.dispatch(...)` inside the transaction; `jobs.dispatch_now(...)` is the explicitly non-transactional form.
 
 Conceptual API:
 

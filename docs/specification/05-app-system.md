@@ -21,6 +21,30 @@ Applications are explicitly registered Rust modules or crates with stable identi
 Proc macros and runtime share a versioned generated-code contract. Incompatible pairs/duplicate runtimes fail with actionable diagnostics before serving traffic. Exact pairing versus supported version ranges, MSRV and features remain PROPOSED. Generated internal symbols are not public application APIs. Compile-pass/fail tests cover renamed dependencies, reexports, feature combinations, workspace skew and upgrades.
 
 
+## Review Candidate 2 amendment
+
+**Status:** architectural direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (M4, M8, H10). Syntax is illustrative; claims remain VALIDATION REQUIRED. Takes precedence over the Candidate 1 amendment where they conflict.
+
+### Reusable apps reference host identities by contract, not by type
+
+A reusable crate cannot name the host application's Rust types. Direction:
+
+- **Auth user contract.** The project registers exactly one auth user model (illustrative: `.auth_user::<User>()`). Its primary key type is the framework type `rjango::auth::UserId` (a UUID newtype). Reusable apps store `UserId` fields and declare a foreign key to "the configured auth user model". The AMG resolves this at the Resolve stage and migration generation emits the concrete foreign key in the host's migration graph. This replaces Django's swappable `AUTH_USER_MODEL` with a typed contract and no generics.
+- **Other host references.** These use the same pattern: a framework-defined ID type plus a named contract, such as tenant (`TenantId`) or a contract the reusable app declares that the host binds at registration. Generic app parameters (`rjango_comments::app::<MyUser>()`) are not the default because they spread type parameters into user code and error messages.
+- **Migrations.** Reusable-app migrations depend on contract nodes ("auth user table exists"), not on host migration IDs. `rjango check` fails if a contract is unbound.
+
+### Configuration of reusable apps
+
+Typed configuration structs are the schema. Values come from the layered configuration ([18](18-configuration.md)) under the app's namespace, and `.configure(...)` in code supplies defaults that configuration may override per environment. Secrets are never accepted as code literals.
+
+### Version skew
+
+The claim that incompatible macro/runtime pairs fail "before serving traffic" is corrected. Duplicate runtimes are made a **dependency-resolution error**: lockstep exact versions plus a Cargo `links` key. Macros resolve the facade's actual crate name, so renamed dependencies work, and reach internals only through its hidden `__private` module. See [24](24-developer-experience-and-diagnostics.md).
+
+### Registration
+
+App builders register roots only; referenced schemas are collected transitively ([02](02-application-metadata-graph.md)). The `.models(models::metadata())` style below is illustrative.
+
 ## Open decisions and interpretation
 
 The full plugin/package compatibility contract remains unspecced; app descriptor and lifecycle signatures are illustrative.

@@ -96,6 +96,8 @@ Django signal
 
 Documentation should help developers choose based on semantics rather than offer a single mechanical replacement.
 
+> **Candidate 2:** model hooks are synchronous and receive only the row, so they have no framework handle for email, jobs or the database. Durable reactions use `tx.emit(event)` with durable listeners, which are jobs. Jobs are dispatched with `tx.dispatch(job)` inside the transaction, the durable counterpart of `transaction.on_commit(task.delay)`. The default queue is a PostgreSQL table, so Celery's broker is not needed to start.
+
 Example:
 
 ```

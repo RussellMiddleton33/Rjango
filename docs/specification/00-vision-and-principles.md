@@ -10,6 +10,17 @@ Rjango combines Django-style productivity with Rust correctness, async execution
 
 > All commands, Rust types, generated output, tests, and performance results shown as examples are design illustrations. This documentation does not establish that Rjango implements them or that they have passed validation.
 
+## Review Candidate 2 amendment
+
+**Status:** direction adopted from the [independent review](../reviews/independent-review-candidate-1.md) (C2, H4, L6). Takes precedence over the sketches below.
+
+- **Primary audience.** Experienced Django developers who do not yet know Rust. They should be productive at Tier 0 ([22](22-application-operations-and-services.md)) without first mastering ownership, lifetimes or async internals. The framework teaches those concepts where they matter instead of hiding semantics ([24](24-developer-experience-and-diagnostics.md)). Experienced Rust developers and new backend developers remain supported audiences.
+- **North-star output.**
+  - "7 migrations applied" in the `rjango dev` output below occurs only against a database created as development-marked ([04](04-migrations.md)).
+  - "MCP development server available" means a stdio or loopback-only development server with read-only metadata capabilities by default ([MCP](../ai/mcp-architecture.md)).
+- **"Safe shared state".** The principle covers framework-managed resources. Mutable application state is explicit ([01](01-runtime-architecture.md)).
+- **"Excellent errors".** The [diagnostics contract](24-developer-experience-and-diagnostics.md) turns this principle into testable requirements.
+
 ## Open decisions and interpretation
 
 The final 1.0 scope and release contract remain open. Early release milestones in historical discussion are superseded by the requirement to finish the design first.

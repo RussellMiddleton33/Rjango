@@ -30,4 +30,15 @@ This ADR records an architectural agreement, not completed implementation or a p
 
 ## Candidate 1 clarification
 
-The [architecture review](../reviews/architecture-review-candidate-1.md) retains this foundational decision and records its strengthened boundaries. Observed AMG evidence remains a separate overlay; migrations use phase/step recovery and checksums; core MCP never exposes raw secrets and defaults to zero production application-data access. These amendments supersede conflicting earlier sketches, with validation still required.
+The [architecture review](../reviews/architecture-review-candidate-1.md) retains this decision. Observed evidence is a separate overlay bound to a definition fingerprint, and projection-specific fingerprints replace a single application hash.
+
+## Candidate 2 clarification
+
+From the [independent review](../reviews/independent-review-candidate-1.md):
+
+- Cross-type validation happens when the AMG is built (at startup or in metadata-only introspection mode), not at compile time.
+- Applications register roots, and referenced schemas are collected transitively.
+- Exposed identities are recorded in a checked-in `rjango.ids.lock`.
+- Fingerprints detect declared change only, plus annotated policy bodies, never behavioural equivalence.
+
+See [02](../specification/02-application-metadata-graph.md).

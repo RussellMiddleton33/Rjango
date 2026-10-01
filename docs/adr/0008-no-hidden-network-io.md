@@ -26,4 +26,8 @@ Django-style implicit relation fetching and hidden cross-system effects are not 
 
 Query-count, loaded-state, side-effect visibility and failure-path checks must show that the invariant holds across subsystems.
 
+## Candidate 2 refinement
+
+Loaded relations are `Loaded<M>` values with runtime-checked accessors ([ADR 0014](0014-loaded-relations.md)). Model hooks and schema validators are synchronous and receive no framework handle, so they cannot use framework I/O. Blocking foreign I/O inside them is not prevented by the compiler; it is a documented anti-pattern caught by the development stall detector. Cache keys and calls are explicit, awaited operations.
+
 This ADR records an architectural agreement, not completed implementation or a passing validation result. A future revision should link evidence or a superseding ADR rather than silently rewriting the decision history.

@@ -26,4 +26,8 @@ Diesel was discussed as a legitimate alternative with strong query typing. The c
 
 Macro/API ergonomics, loaded-state handling, raw-query interoperability, cancellation, N+1 behavior and performance remain VALIDATION REQUIRED. The former “PROVISIONALLY VALIDATED” label did not establish passing tests.
 
+## Candidate 2 clarification
+
+What is SPEC-LOCKED is **SeaORM as the ORM engine behind a Rjango-owned public API, over SQLx, with a direct SQLx escape hatch**. The specific major versions (SeaORM 2.x, SQLx 0.9) are a **design target, not a lock**. They are pinned only when evidence shows shared pool/transaction interoperability, macro compatibility and stable releases. If evidence fails, the version target changes without reopening the architecture. The ORM-to-SQLx shared-transaction question (raw SQL inside an ORM transaction) is a gating validation item for [ADR 0013](0013-transaction-ownership.md).
+
 This ADR records an architectural agreement, not completed implementation or a passing validation result. A future revision should link evidence or a superseding ADR rather than silently rewriting the decision history.

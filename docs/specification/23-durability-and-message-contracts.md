@@ -2,7 +2,16 @@
 
 [Master specification](README.md) · [Operations](22-application-operations-and-services.md)
 
-**Status:** REVIEW CANDIDATE 1; architectural requirements adopted, implementation/backend guarantees VALIDATION REQUIRED.
+**Status:** REVIEW CANDIDATE 2; architectural requirements adopted, implementation/backend guarantees VALIDATION REQUIRED.
+
+## Review Candidate 2 amendment
+
+From the [independent review](../reviews/independent-review-candidate-1.md) (M10, M1, C2):
+
+- **Producer API.** Producers write intents through the transaction: `tx.emit(event)` for durable domain events and `tx.dispatch(job)` for jobs ([22](22-application-operations-and-services.md)). APIs named "after commit" for durable effects are SUPERSEDED; `tx.after_commit(f)` is reserved for explicitly non-durable, process-local work.
+- **Relay only for external brokers.** When the job backend is the default PostgreSQL queue in the same database, the queue row *is* the outbox record and no relay runs ([12](12-jobs-and-scheduling.md)). The relay below applies to external brokers, webhooks and email providers.
+- **Durable listeners** are jobs keyed by (event message ID, listener ID), which gives each listener per-event idempotency by construction.
+- **Email, webhooks and auth side effects** use this outbox; the after-commit email sketch in [15](15-email-and-notifications.md) is SUPERSEDED.
 
 ## Transactional outbox
 

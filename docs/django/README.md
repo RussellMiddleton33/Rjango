@@ -15,6 +15,10 @@ Each guide explains the familiar Django concept, the Rjango design counterpart, 
 | Admin | Explicitly registered AMG projection with permissions and audit | [Admin](admin.md) |
 | Jobs, caching, storage, email, signals | Integrated service contracts with explicit effects and durability | [Application services](services.md) |
 | Views, middleware, serializers, authentication, settings | Initial conceptual mappings preserved | [Web and security](web-and-security.md) |
+| Everyday workflow (views, `request.user`, `atomic`, `on_commit`, shell, runserver) | Tier 0 operations, scoped data, owning transactions | [Everyday workflow](everyday-workflow.md) |
+| Learning Rust through Rjango | Ordered concept curriculum with typical errors | [Rust concepts](rust-concepts.md) |
+
+**Candidate 2:** start with [Everyday workflow](everyday-workflow.md). Where older guide pages conflict with it (for example the ambient-looking `atomic` closure mapping), the Candidate 2 direction governs.
 
 ## Differences to teach explicitly
 
